@@ -831,7 +831,7 @@ def get_quantifications_prediction_split(subject:int, prediction='Top 1',
 
 def plot_selfpredictability(dataset = 'Armani', plot_split = False, top=1):
     
-    dir_path = '/project/3018059.03/results/{}/self_predictability/'.format(dataset)
+    dir_path = '/project/3018059.03/Lingpred/results/{}/self_predictability/'.format(dataset)
     if plot_split: 
         if dataset == 'Armani':
             file = 'new_in_correct_selfpredictability_Glove_first_session.pkl'
