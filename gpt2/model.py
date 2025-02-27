@@ -116,7 +116,6 @@ class MyGPT2():
 
         return layer_act_word_finals
     
-
     def get_windowed_layer_act(self, encoded_text, min_context=512, layer=8, scaled=True):
         """
         Extracts contextualized GPT-2 embeddings from encoded text.
@@ -171,8 +170,7 @@ class MyGPT2():
             #layer_act_all_words = fit.transform(layer_act_all_words)
                 
         return layer_act_all_words
-    
-    
+     
     # function that returns logits for the entire text 
     def get_windowed_logits(self, encoded_text, min_context=512):
 
@@ -204,7 +202,6 @@ class MyGPT2():
 
         return logits_all_words
     
-
     def get_prediction(self, encoded_text, min_context=512):
         """
         Computes the top-1 word prediction probabilities and indices from encoded text.
@@ -273,25 +270,35 @@ class MyGPT2():
                 
         return predicted_BPE_all, probabilities_all
 
-
     def align_predictions(self, encoded_text, annotation_df, dropped_epochs:list, dataset:str, subject:int, session:int,
                       min_context=512):
-        '''
-        Params:
-        -------
-        - encoded text
-        - annotation data frame (pandas) with the words
-        - dropped epochs (usually an empty list)
-        - dataset: 'Armani' or 'Gwilliams'
-        - subject: integer (for Armani 1-3)
-        - session: integer (for Armani 1-10)
-        - min_context: minimum contextual window for GPT
-        
+        """
+        Predicts words from encoded text and returns their probabilities.
+
+        Parameters
+        ----------
+        encoded_text : torch.Tensor
+            The encoded text.
+        annotation_df : pandas.DataFrame
+            A DataFrame containing the words.
+        dropped_epochs : list
+            A list of dropped epochs. Usually an empty list.
+        dataset : str
+            The dataset name. Can be 'Armani' or 'Gwilliams'.
+        subject : int
+            The subject identifier. For Armani, ranges from 1 to 3.
+        session : int
+            The session identifier. For Armani, ranges from 1 to 10.
+        min_context : int
+            The minimum contextual window for GPT.
+
         Returns
-        --------
-        - list with the predicted words in upper case
-        - list with the probabilities of these words
-        '''
+        -------
+        list of str
+            A list containing the predicted words in uppercase.
+        list of float
+            A list containing the probabilities of the predicted words.
+        """
 
         # get predicted BPEs and their probabilities (softmax of logits):
         predicted_BPEs, probabilities = self.get_prediction(encoded_text)
@@ -308,45 +315,46 @@ class MyGPT2():
         probabilities  = probabilities[initial_final_BPEs.T[1]]
 
         # Decode the BPE and get rid off the whitespace denoting that it's a word-initial BPE 
-        predicted_words   = [self.tokeniser.decode(BPE).upper() for BPE in predicted_BPEs]
-        predicted_words   = [word.strip(' ') for word in predicted_words]
+        predicted_words = [self.tokeniser.decode(BPE).upper() for BPE in predicted_BPEs]
+        predicted_words = [word.strip(' ') for word in predicted_words]
 
         return predicted_words, probabilities
         
-        
     def get_layer_act(self, index, encoded_text, layer=8, scaled=True):
-        
-        '''
-        Params: 
-        - index: must be index of the last BPE of the word of interest, e.g. Allan is split into All - an
-        - encoded_text: tensor conainting the entire encoded text
-        - layer: layer the activation is extracted from
-        - scaled: whether or not the activation is to be standardised over all dimensions of GPT2 
-        
-        Returns:
-        - numpy array of shape (1, GPT2-dim) containing the contextualised embedding to the indexed word for the specified layer
-        '''
-        
+        """
+        Extracts the contextualized GPT-2 embedding for a specific word.
+
+        Parameters
+        ----------
+        index : int
+            The index of the last BPE token of the word of interest. For example, "Allan" is split into "All - an",
+            so the index should refer to the last subword ("an").
+        encoded_text : torch.Tensor
+            A tensor containing the entire encoded text.
+        layer : int
+            The GPT-2 layer from which the activation is extracted.
+        scaled : bool, optional
+            Whether to standardize the activation over all dimensions of GPT-2. Defaults to `False`.
+
+        Returns
+        -------
+        numpy.ndarray
+            An array of shape (1, GPT2-dim) containing the contextualized embedding for the indexed word at the specified layer.
+        """
+
         # set start and end of window
         if index > self.context_len:
             start_context = index - self.context_len
         else: 
             start_context = 0
 
-            
         # get layer (default = 8) embedding for this window of 1024 from start_context:index
         model_output = self.model.forward(encoded_text[0, start_context:index].to(self.device), output_hidden_states=True)
  
         layer_act    = model_output.hidden_states[layer].detach()  # get layer activation
         #print(layer_act.shape)
-        layer_act      = layer_act[0].cpu().numpy()                # reduce to 2D, send back to CPU & convert to np array
-                                                                   # a numpy array is needed for scaling --> to CPU necessary
-        
-        # scale if scaled is set to True: I am not doing scaling in the brainscore_per_channel method
-        #if scaled:
-           # fit       = self.scaler.fit(layer_act)
-           # layer_act = fit.transform(layer_act)
-
+        layer_act      = layer_act[0].cpu().numpy()   # reduce to 2D, send back to CPU & convert to np array
+                                                      # a numpy array is needed for scaling --> to CPU necessary
             
         # get the last row, i.e. the context specific activation of our word    
         word_activation = layer_act[-1,:] 
@@ -356,26 +364,32 @@ class MyGPT2():
     
         return word_activation   
        
-    
-
     def token2word_indices(self, encoded_text):
-        
-        '''
-        Params: 
-        - encoded_text: tensor conainting the entire encoded text
-        
-        Returns:
-        - 2D array with indices in which each row contains word-initial and word-final BPEs
-        
-        E.g.: If our encoded text started with the name Allan which is split into All-an then:
-        
-              first_word_final_BPE = token2word_indices(encoded_text)[0]
-              first_word_final_BPE
-              >>> [0, 1]
-              
-              tokeniser.decode(encoded_text[0][first_word_final_BPE[1]])
-              >>> an
-        '''
+        """
+        Extracts word-initial and word-final BPE indices from encoded text.
+
+        Parameters
+        ----------
+        encoded_text : torch.Tensor
+            A tensor containing the entire encoded text.
+
+        Returns
+        -------
+        numpy.ndarray
+            A 2D array where each row contains the indices of the word-initial and word-final BPEs.
+
+        Examples
+        --------
+        If the encoded text starts with the name "Allan", which is split into "All-an", then:
+
+        >>> first_word_final_BPE = token2word_indices(encoded_text)[0]
+        >>> first_word_final_BPE
+        [0, 1]
+
+        >>> tokenizer.decode(encoded_text[0][first_word_final_BPE[1]])
+        'an'
+        """
+
 
         index_word_end   = [] # list with the indices of word-final BPEs
         index_word_start = [] # list with the indices of word-initial BPEs
@@ -420,21 +434,26 @@ class MyGPT2():
 
         return np.vstack((index_word_start, index_word_end)).T        
         
-        
-        
-        
     def get_words_from_BPEs(self, encoded_text, preprocessed=True):     
         
-        '''
-             Params: 
-             - MyGPTP instance
-             - encoded text
-             
-             Returns:
-             - list of words (used to check against the dataframe)
-             - 2D array with indices corresponding to the word-initial and word-final BPEs
-        '''
-            
+        """
+        Extracts words and their corresponding BPE indices from encoded text.
+
+        Parameters
+        ----------
+        gpt2_instance : GPT2
+            An instance of the GPT2 class.
+        encoded_text : torch.Tensor
+            A tensor containing the entire encoded text.
+
+        Returns
+        -------
+        list of str
+            A list of words extracted from the encoded text (used to check against the dataframe).
+        numpy.ndarray
+            A 2D array where each row contains the indices of the word-initial and word-final BPEs.
+        """
+    
         BPEs = [self.tokeniser.decode(encoded_text[0][i]) for i in range(encoded_text.size()[1])] # get BPEs
             
         initial_final_BPEs = self.token2word_indices(encoded_text)  # returns array of shape (nr_words, 2)
@@ -446,20 +465,25 @@ class MyGPT2():
             merged_words       = self.merge_words(initial_final_BPEs, BPEs) 
             
         return merged_words, initial_final_BPEs
-        
-        
-        
-    def merge_words(self, initial_final_BPEs, BPEs): 
             
-        '''
-            Params:
-            - initial_final_BPEs: 2-D array of shape (nr_words, 2) with word-initial and word-final BPE in each row
-            - BPEs: a list of the decoded BPEs from the encoded text
-            
-            Returns:
-            - list with merged words, stripped of whitespaces
-        '''
-            
+    def merge_words(self, initial_final_BPEs, BPEs):   
+        """
+        Merges BPE tokens into full words.
+
+        Parameters
+        ----------
+        initial_final_BPEs : numpy.ndarray
+            A 2D array of shape (nr_words, 2), where each row contains the word-initial and word-final BPE indices.
+        BPEs : list of str
+            A list of decoded BPE tokens from the encoded text.
+
+        Returns
+        -------
+        list of str
+            A list of merged words, stripped of whitespaces.
+        """
+
+        #initialise empty list
         merged_words = []
 
         for word_ind in initial_final_BPEs:
@@ -476,11 +500,23 @@ class MyGPT2():
             
         return merged_words
         
-    
-    
     def merge_BPEs(self, merged_words, initial_final_BPEs):
-            
-        #List of indices which need to be merged with their previous word, i.e men + 's --> men's
+        """
+        Identifies and merges word indices that need to be combined with their previous word, e.g., "men" + "'s" → "men's".
+
+        Parameters
+        ----------
+        merged_words : list of str
+            A list of words merged from the BPEs.
+        initial_final_BPEs : numpy.ndarray
+            A 2D array of shape (nr_words, 2), where each row contains the word-initial and word-final BPE indices.
+
+        Returns
+        -------
+        numpy.ndarray
+            A 2D array of shape (nr_words, 2), where necessary words with contractions have been merged.
+        """
+
         index_list = []
 
         for nr, word in enumerate(merged_words):
@@ -500,35 +536,45 @@ class MyGPT2():
                 index_list.append(nr)
             if word == "clock" and merged_words[nr-1] == "o":
                 index_list.append(nr)
-
-                    
+        
         # overwrite word-final index with new index:
         for index in index_list:
             initial_final_BPEs[index-1][1] = initial_final_BPEs[index][1] 
-            
             
         # delete unnecessary rows, containing 's, 't, etc. from initial_final_BPEs
         initial_final_BPEs = np.delete(initial_final_BPEs,index_list, axis=0)
             
         return initial_final_BPEs
     
-    
-    
-            
+       
 # --------------------------------------------------
 #                HELPER FUNCTIONS
 # --------------------------------------------------
 
 def get_windows(min_context, window_size, start, end):
-   
-    '''
-    Returns an list of shape (nr_windows, 3) each row containing (window_index, start_window, end_window)
-    '''
-   
+    
+    """
+    Generates a list of window indices with their start and end positions.
+
+    Parameters
+    ----------
+    min_context : int
+        The minimum context size for each window.
+    window_size : int
+        The size of each window.
+    start : int
+        The starting index for window segmentation.
+    end : int
+        The ending index for window segmentation.
+
+    Returns
+    -------
+    list of tuple
+        A list of shape (nr_windows, 3), where each row contains (window_index, start_window, end_window).
+    """
     starts = np.arange(start, end-window_size+min_context, min_context)
     ends   = [s + window_size for s in starts]
-
-    arr = [[nr, start, end] for nr, (start, end) in enumerate(zip(starts, ends))]
+    arr    = [[nr, start, end] for nr, (start, end) in enumerate(zip(starts, ends))]
        
     return arr
 
@@ -542,24 +588,41 @@ def contains_whitespace(s):
 def contains_only_whitespace_punctuation(s):
     return np.all([c in string.whitespace + string.punctuation + '–' for c in s])
 
-
-
 # Checks and corrects the alignment between words corresponding to GPT's BPEs and the annotation dataframe for a given session
 def check_alignment(merged_words, initial_final_BPEs, annotation_df, dropped_epochs, task='0',
                     dataset='Armani', subject=1, session=1):
-    '''
-    Params:
-        - merged_words: list of words from merging all decoded BPEs in initial_final_BPEs
-        - initial_final_BPEs: array of shape (words, 2), each row containing INDEX of the word-initial and word-final BPE
-        - annotation_df: pandas dataframe containing the words for the epoch
-        - dataset: MEG dataset, can be 'sherlock', 'Gwilliams', or 'Armani'
-        - subject: MEG subject
-        - session: MEG session
+    """
+    Compares merged words from GPT with annotation data and identifies mismatches.
 
-    Returns:
-        - An array of shape (words, dimensions) containing the contextualised embeddings of the specified layer
-    '''
-    
+    Parameters
+    ----------
+    merged_words : list of str
+        List of words obtained by merging all decoded BPEs in `initial_final_BPEs`.
+    initial_final_BPEs : numpy.ndarray
+        A 2D array of shape (words, 2), where each row contains the index of the word-initial and word-final BPE.
+    annotation_df : pandas.DataFrame
+        A DataFrame containing the words for each epoch.
+    dataset : str
+        The MEG dataset, either 'Gwilliams' or 'Armani'.
+    dropped_epochs : list of int
+        A list of MEG epoch indices that were dropped by MNE during epoching.
+    task : str
+        The task identifier in the Gwilliams dataset.
+    subject : int or str
+        The MEG subject identifier.
+    session : int
+        The MEG session identifier.
+
+    Returns
+    -------
+    None
+        Prints words that are not identical between the annotation DataFrame and the merged words from GPT.
+    numpy.ndarray
+        The updated `initial_final_BPEs`.
+    list of str
+        A list of merged words that needed to be dropped.
+    """
+
     if dataset=='Armani': # these missing words have been checked for subject 1 & 2, other subjects might differ!!!
         if session==1: 
             missing_words = []
@@ -588,7 +651,6 @@ def check_alignment(merged_words, initial_final_BPEs, annotation_df, dropped_epo
         missing_words = get_indices_to_drop(merged_words, df_words, task)
         
     final_space     = [merged_words.index(merged_words[-1])]
-    
     indices_to_drop = missing_words + final_space # combine lists 
         
     # drop indices from 2D array with BPEs and create new list of merged words
@@ -610,57 +672,23 @@ def check_alignment(merged_words, initial_final_BPEs, annotation_df, dropped_epo
         
     return merged_words_dropped, initial_final_BPEs
 
-
-
-def correct_preds(predicted_words:list, annotation_df):
-    '''
-    Returns 
-    '''
-    # initialise list
-    correct_predictions = []
-    
-    # pandas series with actual words to numpy array
-    actual_words = annotation_df.word.to_numpy()
-    
-    # check if the predicted word is identical to the (beginning of) the next word
-    for i in range(len(predicted_words)-1):
-        correct = correct_pred(predicted_words[i].upper(), actual_words[i+1].upper())
-        correct_predictions.append(correct)
-        
-    print(np.unique(correct_predictions, return_counts= True))
-        
-    return correct_predictions
-
-
-
-def correct_pred(pred_word:str, actual_word:str):
-    '''
-    Checks whether the predicted word is identical to (the beginning of) the actual word:
-    
-    correct-pred('speech', 'speechless')   --> True
-    correct-pred('speeches', 'speechless') --> False
-    '''
-    
-    len_pred_word = len(list(pred_word))
-    
-    return list(pred_word) == list(actual_word)[0:len_pred_word]
-
-
-
-# Get the indices which need to be dropped from GPT-2 because they are not in the dataframe:
 def get_indices_to_drop(merged_words, df_words, task):
-    
-    '''
-    Params :
-    --------
-    - merged_words: array-like with the merged words from GPT's initial-final-BPEs
-    - df_words:     pandas dataframe containing a column 'word' with the words present in the neural data
-    
-    Returns:
-    --------
-    - list with indices that need to be dropped from initial-final-BPEs
-    '''
-        
+    """
+    Identifies indices of words from GPT-2 that need to be dropped because they are not present in the annotation DataFrame.
+
+    Parameters
+    ----------
+    merged_words : array-like
+        The list or array containing merged words from GPT's initial-final BPEs.
+    df_words : pandas.DataFrame
+        A DataFrame containing a column 'word' with the words present in the neural data.
+
+    Returns
+    -------
+    list of int
+        A list of indices corresponding to words that need to be dropped from initial-final BPEs.
+    """
+
     ind_list = []
 
     while get_index_to_drop(merged_words, df_words):
@@ -680,21 +708,23 @@ def get_indices_to_drop(merged_words, df_words, task):
     
     return indices_to_drop
 
-
 # get next index to drop
 def get_index_to_drop(merged_words, df_words):
-   
-    '''
-    Params :
-    --------
-    - merged_words: array-like with the merged words from GPT's initial-final-BPEs
-    - df_words:     pandas dataframe containing a column 'word' with the words present in the neural data
-    
-    Returns:
-    --------
-    - next index that needs to be dropped from initial-final-BPEs
-    - or FALSE if there are no more indices that need to be dropped
-    '''
+    """
+    Finds the next index of a word from GPT-2 that needs to be dropped because it is not present in the annotation DataFrame.
+
+    Parameters
+    ----------
+    merged_words : array-like
+        The list or array containing merged words from GPT's initial-final BPEs.
+    df_words : pandas.DataFrame
+        A DataFrame containing a column 'word' with the words present in the neural data.
+
+    Returns
+    -------
+    int or bool
+        The next index that needs to be dropped from initial-final BPEs, or `False` if no more indices need to be dropped.
+    """
 
     for nr, i in enumerate(range(len(df_words))):
         if df_words.word.to_numpy()[i].lower() != str(merged_words[i].lower()): 
