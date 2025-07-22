@@ -407,7 +407,8 @@ def plot_predicting_acoustics(dataset='Armani',
                               top=1, 
                               vectors='Glove', 
                               countinuous_spectrogram = False,
-                              use_regressed_out=True):
+                              use_regressed_out=True,
+                              plot_post_onset=False):
 
     if countinuous_spectrogram:
         type_of_acoustic_y_matrix = 'neural_data'
@@ -461,9 +462,15 @@ def plot_predicting_acoustics(dataset='Armani',
     fig, (ax1) = plt.subplots(1, 1, figsize=(4, 4))
 
     for i, key in enumerate(results.keys()):
-        ax1.plot(times_100[:78], results[key].mean(axis=0).mean(axis=0)[:78], c=colours[models[i]], label=labels[i])   
-        ax1.fill_between(times_100[:78], lowerCI(reshape(results[key][:, :, :78])), 
-                                upperCI(reshape(results[key][:, :, :78])), color=colours[models[i]], alpha=0.3)
+        if not plot_post_onset:
+            ax1.plot(times_100[:78], results[key].mean(axis=0).mean(axis=0)[:78], c=colours[models[i]], label=labels[i])   
+            ax1.fill_between(times_100[:78], lowerCI(reshape(results[key][:, :, :78])), 
+                                    upperCI(reshape(results[key][:, :, :78])), color=colours[models[i]], alpha=0.3)
+        else:
+            ax1.plot(times_100, results[key].mean(axis=0).mean(axis=0), c=colours[models[i]], label=labels[i])   
+            ax1.fill_between(times_100[:78], lowerCI(reshape(results[key][:, :, :])), 
+                                    upperCI(reshape(results[key][:, :, :])), color=colours[models[i]], alpha=0.3)
+
 
     ax1.legend()
     #ax1.set_ylim([-0.005, 0.05])
@@ -483,6 +490,13 @@ def plot_predicting_acoustics(dataset='Armani',
                                                                                                   use_regressed_out,
                                                                                                   plot_split, 
                                                                                                   top)
+    if plot_post_onset:
+        fig_path = fig_folder+'Acoustics_{}_with_residualised_vectors_{}-prediction_split_{}-top_{}_with_post_onset.pdf'.format(dataset,
+                                                                                                                                use_regressed_out,
+                                                                                                                                plot_split, 
+                                                                                                                                top)
+    
+
     plt.savefig(fig_path, format='pdf',bbox_inches='tight')
 
 
@@ -914,4 +928,4 @@ def plot_regressed_out_selfpredictability():
     fig_path = fig_folder+'Selfpredictability_regressed_out_True.pdf'
 
     plt.savefig(fig_path, format='pdf', bbox_inches='tight')
-    plt.show()       
+    plt.show()
