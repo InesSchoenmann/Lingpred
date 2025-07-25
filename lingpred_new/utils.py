@@ -163,7 +163,7 @@ def get_onsets_offsets_per_run(dataset:str, subject:int, session:int, run:int, t
             sess = '0' + str(session)
         
         # get path to events file:
-        dir_path = '/project/3018059.03/data/Armani/'
+        dir_path = '/project/3018059.03/Lingpred/data/Armani/'
         filepath = 'sub-00' + str(subject) +'/' + 'ses-' + sess +'/'+ 'meg/'
         filename = 'sub-00' + str(subject) + '_ses-' + sess + '_task-compr_events.tsv'
         
@@ -203,7 +203,7 @@ def get_onsets_offsets_per_run(dataset:str, subject:int, session:int, run:int, t
         
     if dataset == 'Gwilliams':
         
-        path_dir = '/project/3018059.03/data/Gwilliams/'
+        path_dir = '/project/3018059.03/Lingpred/data/Gwilliams/'
         file_name = 'annotation_task_'+ task + '.tsv'
         
         # read pandas DataFrame and keep only sentences (not word lists):
@@ -297,7 +297,7 @@ def get_phonemes_onsets_offsets(dataset:str, subject:int, session:int, run:int, 
             sess = '0' + str(session)
         
         # get path to events file:
-        dir_path = '/project/3018059.03/data/Armani/'
+        dir_path = '/project/3018059.03/Lingpred/data/Armani/'
         filepath = 'sub-00' + str(subject) +'/' + 'ses-' + sess +'/'+ 'meg/'
         filename = 'sub-00' + str(subject) + '_ses-' + sess + '_task-compr_events.tsv'
         
@@ -337,7 +337,7 @@ def get_phonemes_onsets_offsets(dataset:str, subject:int, session:int, run:int, 
         
     if dataset == 'Gwilliams':
         
-        path_dir = '/project/3018059.03/data/Gwilliams/'
+        path_dir = '/project/3018059.03/Lingpred/data/Gwilliams/'
         file_name = 'annotation_task_'+ task + '.tsv'
         
         # read pandas DataFrame and keep only sentences (not word lists):
@@ -410,7 +410,7 @@ def get_words_onsets_offsets(dataset:str, subject=1, session=0, run=0, task='0')
             sess = '0' + str(session)
         
         # get path to events file:
-        dir_path = '/project/3018059.03/data/Armani/'
+        dir_path = '/project/3018059.03/Lingpred/data/Armani/'
         filepath = 'sub-00' + str(subject) +'/' + 'ses-' + sess +'/'+ 'meg/'
         filename = 'sub-00' + str(subject) + '_ses-' + sess + '_task-compr_events.tsv'
         
@@ -440,7 +440,7 @@ def get_words_onsets_offsets(dataset:str, subject=1, session=0, run=0, task='0')
         
     if dataset == 'Gwilliams':
         
-        path_dir = '/project/3018059.03/data/Gwilliams/'
+        path_dir = '/project/3018059.03/Lingpred/data/Gwilliams/'
         file_name = 'annotation_task_'+ task + '.tsv'
         
         # read pandas DataFrame and keep only sentences (not word lists):
