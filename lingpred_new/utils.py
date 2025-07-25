@@ -264,6 +264,7 @@ def get_bigram_mask(df: pd.DataFrame, word_col: str = 'word') -> np.ndarray:
     df['next_word'] = df[word_col].shift(-1)
     df['bigram']    = df[word_col] + '_' + df['next_word']
     df_bigrams      = df[:-1]  # exclude last row with NaN bigram
+    df_bigrams      = df[:-1].reset_index(drop=True) # reset index to make sure they are correct
 
     print(df.head())
     

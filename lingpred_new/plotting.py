@@ -851,7 +851,7 @@ def get_quantifications_prediction_split(subject:int, prediction='Top 1',
     print('-'*40)
     print('The maximum p value for all significant timepoint is: ', np.max(significant_pvals))
 
-def plot_selfpredictability(dataset = 'Armani', plot_split = False, top=1):
+def plot_selfpredictability(dataset = 'Armani', plot_split = False, top=1, bigrams_removed = False):
     
     dir_path = '/project/3018059.03/Lingpred/results/{}/self_predictability/'.format(dataset)
     if plot_split: 
@@ -866,6 +866,8 @@ def plot_selfpredictability(dataset = 'Armani', plot_split = False, top=1):
     else:
         if dataset == 'Armani':
             file = 'Glove_GPT_Arbitrary_session_1.pkl'
+            if bigrams_removed:
+                file = 'bigrams_removed_Glove_GPT_Arbitrary_session_1.pkl'
         if dataset == 'Gwilliams':
             file = 'GPT_Glove_arbitrary.pkl'
     path     = dir_path + file   
