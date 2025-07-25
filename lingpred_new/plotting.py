@@ -28,6 +28,7 @@ colours    = {'Glove': cmap_glove[4],
               'GloVe': cmap_glove[4],
               'GPT': cmap[4],
               'arbitrary': cmap[8],
+              'Arbitrary': cmap[8],
               'Predicting MEG Data (Acoustics)':cmap_glove[1],
               'Predicting Residual MEG Data (Acoustics)':cmap[7],
               'Top 1': 'teal',
@@ -251,9 +252,9 @@ def plot_base_effect(subject:int, models=['GPT', 'Glove', 'arbitrary'], dataset=
         ax.legend()
 
     if subject==1:
-        fig_folder = 'figures/main/'
+        fig_folder = 'Lingpred/figures/main/'
     else:
-        fig_folder = 'figures/supplementary/'
+        fig_folder = 'Lingpred/figures/supplementary/'
     fig_path = fig_folder+'base_effect-subject_{}-residualised_{}.pdf'.format(subject, use_regressed_out)
     if use_bigrams_removed:
         fig_path = fig_folder+'base_effect-subject_{}-bigrams_removed-residualised_{}.pdf'.format(subject, use_regressed_out)
@@ -399,9 +400,9 @@ def plot_prediction_split(subject:int, prediction='Top 3', not_prediction= 'Top 
         ax.legend()
 
     if subject==1:
-        fig_folder = 'figures/main/'
+        fig_folder = 'Lingpred/figures/main/'
     else:
-        fig_folder = 'figures/supplementary/'
+        fig_folder = 'Lingpred/figures/supplementary/'
 
     fig_path = fig_folder+'prediction_split-subject_{}-residualised_Glove_{}-{}.pdf'.format(subject, 
                                                                                             use_regressed_out_Glove, 
@@ -416,7 +417,8 @@ def plot_predicting_acoustics(dataset='Armani',
                               vectors='Glove', 
                               countinuous_spectrogram = False,
                               use_regressed_out=True,
-                              plot_post_onset=False):
+                              plot_post_onset=False,
+                              bigrams_removed = False):
 
     if countinuous_spectrogram:
         type_of_acoustic_y_matrix = 'neural_data'
@@ -433,6 +435,8 @@ def plot_predicting_acoustics(dataset='Armani',
     results_file_name= 'regressed_out_vectors_GPT_Glove_arbitrary_y_matrix_like_{}'.format(type_of_acoustic_y_matrix)
     if not use_regressed_out:
         results_file_name= 'original_vectors_GPT_Glove_arbitrary_y_matrix_like_{}'.format(type_of_acoustic_y_matrix)
+        if bigrams_removed:
+            results_file_name= 'bigrams_removed_original_vectors_GPT_Glove_arbitrary_y_matrix_like_{}'.format(type_of_acoustic_y_matrix)
     if plot_split:
         results_file_name= 'top_{}_split_regressed_out_vectors_y_matrix_like_{}{}'.format(top, 
                                                                                           type_of_acoustic_y_matrix, 
@@ -488,11 +492,11 @@ def plot_predicting_acoustics(dataset='Armani',
     #ax1.set_title(dataset+':' + vectors)
 
     if top==1 and dataset=='Armani':
-        fig_folder = 'figures/main/'
+        fig_folder = 'Lingpred/figures/main/'
         if not use_regressed_out:
-            fig_folder = 'figures/supplementary/'       
+            fig_folder = 'Lingpred/figures/supplementary/'       
     else:
-        fig_folder = 'figures/supplementary/'
+        fig_folder = 'Lingpred/figures/supplementary/'
 
     fig_path = fig_folder+'Acoustics_{}_with_residualised_vectors_{}-prediction_split_{}-top_{}.pdf'.format(dataset,
                                                                                                   use_regressed_out,
@@ -655,7 +659,7 @@ def plot_base_effect_Gwilliams(use_regressed_out=False):
     ax1.set_ylabel('Cross-validated Correlation', fontsize=12)
     ax1.axhline(c='indianred',  alpha=0.3)
 
-    fig_folder = 'figures/supplementary/'
+    fig_folder = 'Lingpred/figures/supplementary/'
     fig_path   = fig_folder+'base_effect-Gwilliams_data-residualised_{}.pdf'.format(use_regressed_out)
 
     plt.savefig(fig_path, format='pdf', bbox_inches='tight')
@@ -693,7 +697,7 @@ def plot_prediction_split_Gwilliams(use_regressed_out=False, top=5):
     ax1.set_ylabel('Cross-validated Correlation', fontsize=12)
     ax1.axhline(c='indianred',  alpha=0.3)
 
-    fig_folder = 'figures/supplementary/'
+    fig_folder = 'Lingpred/figures/supplementary/'
     fig_path = fig_folder+'prediction_split-Gwilliams_data-residualised_{}-Top_{}.pdf'.format(use_regressed_out, 
                                                                                               top)
 
@@ -894,13 +898,13 @@ def plot_selfpredictability(dataset = 'Armani', plot_split = False, top=1, bigra
     ax.axhline(c='indianred',  alpha=0.3)
     ax.legend()
 
-    fig_folder = 'figures/supplementary/'
+    fig_folder = 'Lingpred/figures/supplementary/'
 
     if dataset == 'Armani':
         if plot_split ==False:
-            fig_folder = 'figures/main/'
+            fig_folder = 'Lingpred/figures/main/'
         if plot_split == True and top==1:
-            fig_folder = 'figures/main/'
+            fig_folder = 'Lingpred/figures/main/'
 
     fig_path = fig_folder+'Selfpredictability-{}-prediction_split_{}-top_{}.pdf'.format(dataset, plot_split, top)
 
@@ -934,7 +938,7 @@ def plot_regressed_out_selfpredictability():
     ax.legend()
 
 
-    fig_folder = 'figures/main/'
+    fig_folder = 'Lingpred/figures/main/'
     fig_path = fig_folder+'Selfpredictability_regressed_out_True.pdf'
 
     plt.savefig(fig_path, format='pdf', bbox_inches='tight')
