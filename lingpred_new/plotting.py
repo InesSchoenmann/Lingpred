@@ -165,7 +165,8 @@ def get_significant_different_timepoints(corr_dict:dict, subject:int, percentile
 
 
 def plot_base_effect(subject:int, models=['GPT', 'Glove', 'arbitrary'], dataset='Armani', legend=True, 
-                     use_regressed_out=False, use_residualised_neural_data=False, plot_acoustic=False):
+                     use_regressed_out=False, use_bigrams_removed=False, use_residualised_neural_data=False, 
+                     plot_acoustic=False):
     '''
     Creates a plot for a single subject, showing all models in the list
     
@@ -179,12 +180,14 @@ def plot_base_effect(subject:int, models=['GPT', 'Glove', 'arbitrary'], dataset=
         whether to plot a legend for this plot
     -use_regressed_out: boolean
         whether to plot the effect computed from the regressed out vectors
+    -use_bigrams_removed: boolean
+        whether to plot the effect computed with bigrams removed (roughly half the data)
     -use_residualised_neural_data: boolean
         whether to plot the effect computed from the regressed out vectors and neural data with acoustics removed
         
     Returns:
     --------
-    shows plot
+    shows and saves plot
     '''
     
     # get the "brainscores" for all models in the list
@@ -203,10 +206,13 @@ def plot_base_effect(subject:int, models=['GPT', 'Glove', 'arbitrary'], dataset=
             directory = '/project/3018059.03/Lingpred/results/{}/grand_average/'.format(dataset)
             path      = directory + 'corr_{}_vectors_sub_{}.pkl'.format(model, subject)
 
-            if use_regressed_out:
+            if use_regressed_out and use_bigrams_removed:
+                path = directory + 'corr_regressed_out_one_bigrams_removed_{}_vectors_sub_{}.pkl'.format(model, subject)
+            elif use_regressed_out:
                 path = directory + 'corr_regressed_out_one_{}_vectors_sub_{}.pkl'.format(model, subject)
-
-            if use_residualised_neural_data:
+            elif use_bigrams_removed:
+                path = directory + 'corr_bigrams_removed_{}_vectors_sub_{}.pkl'.format(model, subject)
+            elif use_residualised_neural_data:
                 directory = '/project/3018059.03/Lingpred/results/{}/after_regressing_out_acoustics/'.format(dataset)
                 path = directory + 'corr_regressed_out_one_{}_vectors_sub_{}.pkl'.format(model, subject)
             
@@ -249,6 +255,8 @@ def plot_base_effect(subject:int, models=['GPT', 'Glove', 'arbitrary'], dataset=
     else:
         fig_folder = 'figures/supplementary/'
     fig_path = fig_folder+'base_effect-subject_{}-residualised_{}.pdf'.format(subject, use_regressed_out)
+    if use_bigrams_removed:
+        fig_path = fig_folder+'base_effect-subject_{}-bigrams_removed-residualised_{}.pdf'.format(subject, use_regressed_out)
 
     if not (use_residualised_neural_data or plot_acoustic): # those are not part of any figures, neither main nor supplementary
         plt.savefig(fig_path, format='pdf', bbox_inches='tight')
