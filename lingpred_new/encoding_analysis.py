@@ -14,7 +14,6 @@ import pandas as pd
 # make sure you add the path of the Lingpred folder to be able to import the gpt2 module:
 sys.path.append(os.path.abspath("/project/3018059.03/Lingpred"))
 import gpt2
-import lingpred
 import lingpred_new
 
 # wrapper functions for the Armeni dataset for the different models:
@@ -49,7 +48,7 @@ def compute_corr_glove(subjects, sessions, regress_out=True, bigrams_removed=Fal
         df_words_all = pd.DataFrame()
 
         for session in sessions:
-            df_words = lingpred.io.get_words_onsets_offsets(None, 
+            df_words = lingpred_new.io.get_words_onsets_offsets(None, 
                                                         dataset='Armani', 
                                                         subject=subject, 
                                                         session=session, 
@@ -74,14 +73,14 @@ def compute_corr_glove(subjects, sessions, regress_out=True, bigrams_removed=Fal
             bigram_mask   = lingpred_new.utils.get_bigram_mask(df_words_all)
             y_all         = y_all[:,bigram_mask,:] # drop bigrams
             y_all         = y_all[:,1:,:]          # drop first
-            Glove_vectors = lingpred.analysis.regress_out_one(Glove_vectors)
+            Glove_vectors = regress_out_one(Glove_vectors)
             # now I need to adjust the bigram mask so that all integers are one smaller and negative ints are dropped:
             bigram_mask   = [x - 1 for x in bigram_mask if x - 1 >= 0]
             Glove_vectors = Glove_vectors[bigram_mask]
             print(y_all.shape, Glove_vectors.shape)
 
         elif regress_out:
-            Glove_vectors = lingpred.analysis.regress_out_one(Glove_vectors)
+            Glove_vectors = regress_out_one(Glove_vectors)
             # swapaxes such that words is dimension 0, drop the first row and swap back
             y_all = np.swapaxes(np.swapaxes(y_all, 0, 1)[1:], 0, 1)
             print(y_all.shape, Glove_vectors.shape)
@@ -109,7 +108,7 @@ def compute_corr_glove(subjects, sessions, regress_out=True, bigrams_removed=Fal
 
 
         # compute brainscore:
-        corr = lingpred.analysis.brainscore_no_coef(y= y_all, X = Glove_vectors)
+        corr = brainscore_no_coef(y= y_all, X = Glove_vectors)
 
         #saving results:
         results_dir = project_dir + '/results/Armani/grand_average/'
@@ -144,7 +143,7 @@ def compute_corr_arbitrary(subjects, sessions, regress_out=True, bigrams_removed
         df_words_all = pd.DataFrame()
 
         for session in sessions:
-            df_words = lingpred.io.get_words_onsets_offsets(None, 
+            df_words = lingpred_new.io.get_words_onsets_offsets(None, 
                                                         dataset='Armani', 
                                                         subject=subject, 
                                                         session=session, 
@@ -153,7 +152,7 @@ def compute_corr_arbitrary(subjects, sessions, regress_out=True, bigrams_removed
 
         print(len(df_words_all))
 
-        arbitrary_vectors = lingpred.analysis.make_arbitrary_static_vectors(df_words_all, dim = 300)
+        arbitrary_vectors = make_arbitrary_static_vectors(df_words_all, dim = 300)
 
         if subject == 3: 
             arbitrary_vectors = arbitrary_vectors[9:]
@@ -165,14 +164,14 @@ def compute_corr_arbitrary(subjects, sessions, regress_out=True, bigrams_removed
             bigram_mask       = lingpred_new.utils.get_bigram_mask(df_words_all)
             y_all             = y_all[:,bigram_mask,:] # drop bigrams
             y_all             = y_all[:,1:,:]          # drop first
-            arbitrary_vectors = lingpred.analysis.regress_out_one(arbitrary_vectors)
+            arbitrary_vectors = regress_out_one(arbitrary_vectors)
             # now I need to adjust the bigram mask so that all integers are one smaller and negative ints are dropped:
             bigram_mask       = [x - 1 for x in bigram_mask if x - 1 >= 0]
             arbitrary_vectors = arbitrary_vectors[bigram_mask]
             print(y_all.shape, arbitrary_vectors.shape)
 
         elif regress_out:
-            arbitrary_vectors = lingpred.analysis.regress_out_one(arbitrary_vectors)
+            arbitrary_vectors = regress_out_one(arbitrary_vectors)
             # swapaxes such that words is dimension 0, drop the first row and swap back
             y_all = np.swapaxes(np.swapaxes(y_all, 0, 1)[1:], 0, 1)
             print(y_all.shape, arbitrary_vectors.shape)
@@ -198,7 +197,7 @@ def compute_corr_arbitrary(subjects, sessions, regress_out=True, bigrams_removed
         pickle.dump(arbitrary_vectors,f)
         f.close()
         
-        corr = lingpred.analysis.brainscore_no_coef(y= y_all, X = arbitrary_vectors)
+        corr = brainscore_no_coef(y= y_all, X = arbitrary_vectors)
 
         #saving results:
         results_dir = project_dir + '/results/Armani/grand_average/'
@@ -234,7 +233,7 @@ def compute_corr_gpt(subjects, sessions, regress_out=True, bigrams_removed=False
         df_words_all = pd.DataFrame()
 
         for session in sessions:
-            df_words = lingpred.io.get_words_onsets_offsets(None, 
+            df_words = lingpred_new.io.get_words_onsets_offsets(None, 
                                                         dataset='Armani', 
                                                         subject=subject, 
                                                         session=session, 
@@ -260,14 +259,14 @@ def compute_corr_gpt(subjects, sessions, regress_out=True, bigrams_removed=False
             bigram_mask = lingpred_new.utils.get_bigram_mask(df_words_all)
             y_all       = y_all[:,bigram_mask,:] # drop bigrams
             y_all       = y_all[:,1:,:]          # drop first
-            GPT_vectors = lingpred.analysis.regress_out_one(GPT_vectors)
+            GPT_vectors = regress_out_one(GPT_vectors)
             # now I need to adjust the bigram mask so that all integers are one smaller and negative ints are dropped:
             bigram_mask   = [x - 1 for x in bigram_mask if x - 1 >= 0]
             GPT_vectors   = GPT_vectors[bigram_mask]
             print(y_all.shape, GPT_vectors.shape)
 
         elif regress_out:
-            GPT_vectors = lingpred.analysis.regress_out_one(GPT_vectors)
+            GPT_vectors = regress_out_one(GPT_vectors)
             # swapaxes such that words is dimension 0, drop the first row and swap back
             y_all = np.swapaxes(np.swapaxes(y_all, 0, 1)[1:], 0, 1)
             print(y_all.shape, GPT_vectors.shape)
@@ -293,7 +292,7 @@ def compute_corr_gpt(subjects, sessions, regress_out=True, bigrams_removed=False
         pickle.dump(GPT_vectors,f)
         f.close()
         
-        corr = lingpred.analysis.brainscore_no_coef(y= y_all, X = GPT_vectors)
+        corr = brainscore_no_coef(y= y_all, X = GPT_vectors)
 
         #saving results:
         results_dir = project_dir + '/results/Armani/grand_average/'
