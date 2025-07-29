@@ -1,3 +1,4 @@
+name: audio_env
 channels:
   - defaults
 dependencies:
