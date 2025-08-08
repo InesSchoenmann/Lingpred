@@ -13,6 +13,7 @@ import pandas as pd
 
 # make sure you add the path of the Lingpred folder to be able to import the gpt2 module:
 sys.path.append(os.path.abspath("/project/3018059.03/Lingpred"))
+sys.path.append(os.path.abspath("/Users/ines/research/Lingpred"))
 import gpt2
 import lingpred_new
 
@@ -563,7 +564,7 @@ def brainscore_no_coef(X, y, test_mask = None, alpha=5000):
     '''
     Params: 
     - X: X matrix for ridge regression of shape (nr of words, GPT-dim + 1)
-    - y: neural data from all channel with 153 lags per epoch. Shape: (nr of channels, nr of words, 153)
+    - y: neural data from all channel with 157 lags per epoch. Shape: (nr of channels, nr of words, 153)
     - test_mask: a list to be used as mask when splitting during the testing fold, i.e. is_top_1_prediction
     
     Returns:
