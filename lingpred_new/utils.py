@@ -469,7 +469,11 @@ def get_words_onsets_offsets(dataset:str, subject=1, session=0, run=0, task='0')
         filepath  = dir_path + file_name
 
         df_words = pd.read_csv(filepath, sep=',')
-        df_words.rename(columns={'start': 'onset', 'end': 'offset'}, inplace=True)
+        df_words.rename(columns={'start': 'onset'}, inplace=True)
+
+        # add a column with the offsets:
+        offsets            = df_words.onset[1:].to_list()+[df_words.end.iloc[-1]]
+        df_words['offset'] = offsets
 
     return df_words
 
