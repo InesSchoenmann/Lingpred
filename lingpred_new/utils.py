@@ -525,7 +525,7 @@ def get_indices_for_timepoints(times, on_offsets):
     return indices_for_timepoints
 
 
-def make_y_matrix_per_run(X, indices, acoustic_model=False):
+def make_y_matrix_per_run(X, indices, acoustic_model=False, use_random_vector_at_tp_zero=False):
     
     # initialise random generator:
     rng = np.random.default_rng(42)
@@ -533,7 +533,7 @@ def make_y_matrix_per_run(X, indices, acoustic_model=False):
     # initialise y 
     y = np.empty(shape=(indices.shape[0], indices.shape[1], X.shape[1], )) # n_words, n_timepoints, dim
     
-    if acoustic_model:
+    if acoustic_model: # ATTENTION: this here was only used in an earlier Phoneme model
         
         for word_index in range(indices.shape[0]):
 
@@ -553,9 +553,12 @@ def make_y_matrix_per_run(X, indices, acoustic_model=False):
 
         for nr, time_index in enumerate(indices[word_index]):
 
-            if word_index == time_index:
-                random_vector = rng.normal(0, 1, size=(X.shape[1]))
-                y[word_index][nr] = random_vector
+            if use_random_vector_at_tp_zero:
+                if word_index == time_index:
+                    random_vector = rng.normal(0, 1, size=(X.shape[1]))
+                    y[word_index][nr] = random_vector
+                else:
+                    y[word_index][nr] = X[time_index]
             else:
                 y[word_index][nr] = X[time_index]
     return y
