@@ -389,7 +389,8 @@ def get_runs(dataset, session, subject, task):
         runs = [0]
     return runs 
 
-def get_words_onsets_offsets(dataset:str, subject=1, session=0, run=0, task='0'):
+
+def get_words_onsets_offsets(dataset:str, subject:int, session:int, run:int, task='0', use_real_word_offsets=True):
     '''
     Params:
     - raw_data object
@@ -411,7 +412,7 @@ def get_words_onsets_offsets(dataset:str, subject=1, session=0, run=0, task='0')
             sess = '0' + str(session)
         
         # get path to events file:
-        dir_path = '/project/3018059.03/Lingpred/data/Armani/'
+        dir_path = '/project/3018059.03/data/Armani/'
         filepath = 'sub-00' + str(subject) +'/' + 'ses-' + sess +'/'+ 'meg/'
         filename = 'sub-00' + str(subject) + '_ses-' + sess + '_task-compr_events.tsv'
         
@@ -441,7 +442,7 @@ def get_words_onsets_offsets(dataset:str, subject=1, session=0, run=0, task='0')
         
     if dataset == 'Gwilliams':
         
-        path_dir = '/project/3018059.03/Lingpred/data/Gwilliams/'
+        path_dir = '/project/3018059.03/data/Gwilliams/'
         file_name = 'annotation_task_'+ task + '.tsv'
         
         # read pandas DataFrame and keep only sentences (not word lists):
@@ -471,9 +472,16 @@ def get_words_onsets_offsets(dataset:str, subject=1, session=0, run=0, task='0')
         df_words = pd.read_csv(filepath, sep=',')
         df_words.rename(columns={'start': 'onset'}, inplace=True)
 
-        # add a column with the offsets:
-        offsets            = df_words.onset[1:].to_list()+[df_words.end.iloc[-1]]
-        df_words['offset'] = offsets
+        if not use_real_word_offsets:
+            # add a column with the offsets:
+            offsets            = [x - 0.005 for x in df_words.onset[1:].to_list()]+[df_words.end.iloc[-1]]
+            df_words['offset'] = offsets
+
+            #sometimes the two people talk over one another, to avoid negative new_offset times I will replace them with the value in 'end'
+            df_words['offset'] = np.where(df_words["offset"] < df_words["onset"], df_words["end"], df_words["offset"])
+
+        else:
+            df_words.rename(columns={'start': 'onset', 'end':'offset'}, inplace=True)
 
     return df_words
 
