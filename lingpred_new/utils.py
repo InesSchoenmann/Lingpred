@@ -389,7 +389,8 @@ def get_runs(dataset, session, subject, task):
         runs = [0]
     return runs 
 
-def get_words_onsets_offsets(dataset:str, subject=1, session=0, run=0, task='0'):
+
+def get_words_onsets_offsets(dataset:str, subject:int, session:int, run:int, task='0', use_real_word_offsets=True):
     '''
     Params:
     - raw_data object
@@ -411,7 +412,7 @@ def get_words_onsets_offsets(dataset:str, subject=1, session=0, run=0, task='0')
             sess = '0' + str(session)
         
         # get path to events file:
-        dir_path = '/project/3018059.03/Lingpred/data/Armani/'
+        dir_path = '/project/3018059.03/data/Armani/'
         filepath = 'sub-00' + str(subject) +'/' + 'ses-' + sess +'/'+ 'meg/'
         filename = 'sub-00' + str(subject) + '_ses-' + sess + '_task-compr_events.tsv'
         
@@ -441,7 +442,7 @@ def get_words_onsets_offsets(dataset:str, subject=1, session=0, run=0, task='0')
         
     if dataset == 'Gwilliams':
         
-        path_dir = '/project/3018059.03/Lingpred/data/Gwilliams/'
+        path_dir = '/project/3018059.03/data/Gwilliams/'
         file_name = 'annotation_task_'+ task + '.tsv'
         
         # read pandas DataFrame and keep only sentences (not word lists):
@@ -469,7 +470,18 @@ def get_words_onsets_offsets(dataset:str, subject=1, session=0, run=0, task='0')
         filepath  = dir_path + file_name
 
         df_words = pd.read_csv(filepath, sep=',')
-        df_words.rename(columns={'start': 'onset', 'end': 'offset'}, inplace=True)
+        df_words.rename(columns={'start': 'onset'}, inplace=True)
+
+        if not use_real_word_offsets:
+            # add a column with the offsets:
+            offsets            = [x - 0.005 for x in df_words.onset[1:].to_list()]+[df_words.end.iloc[-1]]
+            df_words['offset'] = offsets
+
+            #sometimes the two people talk over one another, to avoid negative new_offset times I will replace them with the value in 'end'
+            df_words['offset'] = np.where(df_words["offset"] < df_words["onset"], df_words["end"], df_words["offset"])
+
+        else:
+            df_words.rename(columns={'start': 'onset', 'end':'offset'}, inplace=True)
 
     return df_words
 
@@ -521,7 +533,7 @@ def get_indices_for_timepoints(times, on_offsets):
     return indices_for_timepoints
 
 
-def make_y_matrix_per_run(X, indices, acoustic_model=False):
+def make_y_matrix_per_run(X, indices, acoustic_model=False, use_random_vector_at_tp_zero=False):
     
     # initialise random generator:
     rng = np.random.default_rng(42)
@@ -529,7 +541,7 @@ def make_y_matrix_per_run(X, indices, acoustic_model=False):
     # initialise y 
     y = np.empty(shape=(indices.shape[0], indices.shape[1], X.shape[1], )) # n_words, n_timepoints, dim
     
-    if acoustic_model:
+    if acoustic_model: # ATTENTION: this here was only used in an earlier Phoneme model
         
         for word_index in range(indices.shape[0]):
 
@@ -549,9 +561,12 @@ def make_y_matrix_per_run(X, indices, acoustic_model=False):
 
         for nr, time_index in enumerate(indices[word_index]):
 
-            if word_index == time_index:
-                random_vector = rng.normal(0, 1, size=(X.shape[1]))
-                y[word_index][nr] = random_vector
+            if use_random_vector_at_tp_zero:
+                if word_index == time_index:
+                    random_vector = rng.normal(0, 1, size=(X.shape[1]))
+                    y[word_index][nr] = random_vector
+                else:
+                    y[word_index][nr] = X[time_index]
             else:
                 y[word_index][nr] = X[time_index]
     return y
