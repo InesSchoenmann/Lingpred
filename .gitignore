@@ -6,3 +6,4 @@ audio/Goldstein/monkey_and_horse_corrected.wav
 __pycache__/
 *.pyc
 .DS_Store
+audio/Armeni/*.pkl
