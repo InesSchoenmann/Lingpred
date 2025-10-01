@@ -372,8 +372,13 @@ def get_phonemes_onsets_offsets(dataset:str, subject:int, session:int, run:int, 
 
 def get_runs(dataset, session, subject, task):
     
-    if dataset == 'Armani':
-        runs = ASH_runs_in_session(session,subject)
+    if dataset == 'Armeni':
+        if session in [1, 2, 6, 8]:
+            runs = np.arange(1,8)
+        if session in [3, 5, 7, 9, 10]:
+            runs = np.arange(1,7)
+        if session in [4]:
+            runs = np.arange(1,9)
         
     if dataset == 'Gwilliams':
         if task == '0':
@@ -403,7 +408,7 @@ def get_words_onsets_offsets(dataset:str, subject:int, session:int, run:int, tas
     - pandas data frame with at least with 3 columns: word, onset, offset 
     
     '''
-    if dataset == 'Armani':
+    if dataset == 'Armeni':
         
         # handle naming of session 10: 
         if session < 10:
@@ -412,12 +417,12 @@ def get_words_onsets_offsets(dataset:str, subject:int, session:int, run:int, tas
             sess = '0' + str(session)
         
         # get path to events file:
-        dir_path = '/project/3018059.03/data/Armani/'
-        filepath = 'sub-00' + str(subject) +'/' + 'ses-' + sess +'/'+ 'meg/'
+        dir_path = '../audio/Armeni/'
+        #filepath = 'sub-00' + str(subject) +'/' + 'ses-' + sess +'/'+ 'meg/'
         filename = 'sub-00' + str(subject) + '_ses-' + sess + '_task-compr_events.tsv'
         
         # read pandas DataFrame for the entire session:
-        annotations = pd.read_csv(dir_path+filepath+filename, sep='\t')
+        annotations = pd.read_csv(dir_path+filename, sep='\t')
         
         # get list with word_onsets for this run:
         word_onset_name = ['word_onset_0{}'.format(run)]
@@ -436,9 +441,17 @@ def get_words_onsets_offsets(dataset:str, subject:int, session:int, run:int, tas
         #convert times to audio onset times:
         df_words.onset = df_words.onset - audio_onset
         
-        # add a column with the offsets:
-        offsets               = df_words.onset + df_words.duration
-        df_words['offset'] = offsets
+        if not use_real_word_offsets:
+            # add a column with the offsets:
+            offsets            = [x - 0.005 for x in df_words.onset[1:].to_list()]+[df_words.onset.iloc[-1]+df_words.duration.iloc[-1]]
+            df_words['offset'] = offsets
+        else:
+            # add a column with the offsets:
+            offsets            = df_words.onset + df_words.duration
+            df_words['offset'] = offsets
+
+        df_words.rename(columns={'value': 'word'}, inplace=True)
+
         
     if dataset == 'Gwilliams':
         
@@ -465,7 +478,7 @@ def get_words_onsets_offsets(dataset:str, subject:int, session:int, run:int, tas
         
     if dataset == 'Goldstein':
         
-        dir_path  = '/Users/ines/research/Lingpred/audio/Goldstein/'
+        dir_path  = '../audio/Goldstein/'
         file_name =  'podcast_transcript.csv'
         filepath  = dir_path + file_name
 
@@ -484,6 +497,8 @@ def get_words_onsets_offsets(dataset:str, subject:int, session:int, run:int, tas
             df_words.rename(columns={'start': 'onset', 'end':'offset'}, inplace=True)
 
     return df_words
+
+
 
 
 def get_times(ref_word_index, on_offsets):
