@@ -5,6 +5,83 @@ import pandas as pd
 import numpy as np
 import pickle
 
+def get_bigram_duplicate_mask(df: pd.DataFrame, word_col: str = 'word') -> np.ndarray:
+    """
+    Returns indices of the first word in each duplicate bigram from a dataframe.
+    
+    Parameters:
+    - df: pandas DataFrame containing a column of words
+    - word_col: name of the column containing the words (default is 'word')
+    
+    Returns:
+    - np.ndarray of indices corresponding to the first word of each duplicate bigram
+    """
+
+    df = df.copy()
+    df['next_word'] = df[word_col].shift(-1)
+    df['bigram']    = df[word_col] + '_' + df['next_word']
+    df['indx']     = [x+1 for x in range(len(df))] # This column is the index shifted by one, since I am interested in the second word of the bigram. e.g, in the bigram monkey_in I want 'in' to be the time locked at t=0 word
+    df_bigrams      = df[:-1].reset_index(drop=True)
+
+    # keep only rows whose bigram occurs more than once
+    dup_mask                 = df_bigrams.duplicated('bigram', keep=False)
+    duplicate_bigram_indices = df_bigrams[dup_mask].indx
+
+    # compute frequency counts
+    bigram_counts = df_bigrams['bigram'].value_counts()
+    # map back to dataframe
+    df_bigrams['bigram_count'] = df_bigrams['bigram'].map(bigram_counts)
+
+    print(df_bigrams[dup_mask].head(10))
+
+    return duplicate_bigram_indices.to_numpy()
+
+def subsample_to_adjust_PoS(df, PoS_percentage_whole_text, target_size, random_state=None, keep_bigrams=False):
+    """
+    Subsample a DataFrame to a target size while approximating a given PoS distribution,
+    optionally keeping all bigrams.
+    """
+    np.random.seed(random_state)
+
+    if keep_bigrams:
+        bigram_rows = df[df['is_bigram']]
+        df_remaining = df[~df['is_bigram']]
+    else:
+        bigram_rows = pd.DataFrame(columns=df.columns)
+        df_remaining = df
+
+    # PoS categories present in remaining rows
+    subset_pos = df_remaining['previous PoS'].unique()
+    probs = PoS_percentage_whole_text[PoS_percentage_whole_text.index.isin(subset_pos)]
+    probs = probs / probs.sum()  # normalize
+
+    # Target number of samples per PoS for the **total sample**
+    n_target_total = (probs * target_size).astype(int)
+
+    # If keeping bigrams, subtract the number of bigrams per PoS
+    if keep_bigrams:
+        bigram_counts = bigram_rows['previous PoS'].value_counts()
+        n_target_remaining = {
+            pos: max(n_target_total.get(pos, 0) - bigram_counts.get(pos, 0), 0)
+            for pos in n_target_total.index
+        }
+    else:
+        n_target_remaining = n_target_total.to_dict()
+
+    # Clip to available rows in non-bigrams
+    n_samples = {
+        pos: min(n_target_remaining[pos], len(df_remaining[df_remaining['previous PoS'] == pos]))
+        for pos in n_target_remaining
+    }
+
+    sampled_dfs = []
+    for pos, n in n_samples.items():
+        if n > 0:
+            df_pos = df_remaining[df_remaining['previous PoS'] == pos]
+            sampled_dfs.append(df_pos.sample(n=n, replace=False, random_state=random_state))
+
+    # Combine bigrams (if any) with sampled rows
+    return pd.concat([bigram_rows] + sampled_dfs)
 
 # function returns the indices of the vectors to be used for the X matrix in the self-predictability per tasks
 def get_indices_per_task(dataset = str, task='0', session=0, cutoff=None, acoustic_model=False):
