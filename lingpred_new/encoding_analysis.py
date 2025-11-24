@@ -337,25 +337,6 @@ def make_arbitrary_static_vectors(annotation_df, dim):
     return arbitrary_vectors   
 
 
-def regress_out_one(X, alpha=5000):
-    '''
-    Returns an X matrix with the previous vectors regressed out
-    The returned matrix is one word smaller (as there is no previous vector for v_0)
-    '''
-    
-    X_matrix = X[:-1]  # drop last
-    y        = X[1:]   # drop first
-
-    # fit Ridge:
-    regression = Ridge(alpha=alpha, fit_intercept=True)
-    regression.fit(X_matrix, y)
-
-    y_hat     = regression.predict(X_matrix)
-    residuals = y - y_hat 
-    
-    return residuals
-
-
 # making the y matrix based on indices and the corresponding X matrix
 def make_y_matrix_for_self_pred(X, indices, acoustic_model=False):
     
@@ -392,96 +373,8 @@ def make_y_matrix_for_self_pred(X, indices, acoustic_model=False):
                 y[word_index][nr] = X[time_index]
     return y
 
-
-# The difference to the brainscore method is that for the self-predictability X and y are standard scaled
-def self_pred_per_dim(X, y, alpha):
-    '''
-    Params: 
-    - X: X matrix for ridge regression of shape (nr of words, dimensionality)
-    - y: vectors for each lags per epoch. Shape: (nr of words, dimensionality)
-    
-    Returns:
-    - list: crossvalidated correlations between y_hat based on X and y
-    '''
-    kf = KFold(n_splits=10)
-
-    y_hat_all_folds  = np.empty(shape=(0, y.shape[1])) # y.shape[1] = nr. of lags
-    y_test_all_folds = np.empty(shape=(0, y.shape[1]))
-
-    for nr, (train_index, test_index) in enumerate(kf.split(X)):
-
-        # split in training and testing data
-        X_train = X[train_index]
-        y_train = y[train_index]
-        X_test  = X[test_index]
-        y_test  = y[test_index]
-        
-        # initialise Standard Scaler:
-        scaler = StandardScaler()
-        
-        # scale for each fold, such that for X, each dim has mean of 0 and SD of 1:
-        fit     = scaler.fit(X_train)
-        X_train = fit.transform(X_train)
-        fit     = scaler.fit(X_test)
-        X_test  = fit.transform(X_test)
-        
-        # Scale y:
-        fit     = scaler.fit(y_train)
-        y_train = fit.transform(y_train)
-        fit     = scaler.fit(y_test)
-        y_test  = fit.transform(y_test)
-              
-
-        # fit Ridge:
-        regression = Ridge(alpha=alpha, fit_intercept=True)
-        regression.fit(X_train, y_train)
-        
-        y_hat     = regression.predict(X_test)
-
-        # concatenate prediction, test sets, intercepts, and coefficients
-        y_hat_all_folds  = np.vstack((y_hat_all_folds, y_hat))
-        y_test_all_folds = np.vstack((y_test_all_folds, y_test))
-
-    # transpose: as correlation is computed for each lag
-    y_hat_all_folds  = y_hat_all_folds.T
-    y_test_all_folds = y_test_all_folds.T
-
-    # compute correlation for each lag:
-    corr_list = []
-    for lag in range(y_test_all_folds.shape[0]):
-        r = stats.pearsonr(y_hat_all_folds[lag], y_test_all_folds[lag]).statistic
-        corr_list.append(r)
-            
-    return corr_list
-
-
-def self_predictability(X, y, alpha=5000):
-    '''
-    Params: 
-    - X: X matrix for ridge regression of shape (nr of words, dimensionality)
-    - y: vectors for each lags per epoch. Shape: (nr of words, dimensionality)
-    
-    Returns:
-    - list: crossvalidated correlations between y_hat based on X and y
-    '''
-    
-    print('We are now in the regression, and y has shape:')
-    print(y.shape)
-    
-    corr_all_dimensions   = np.empty(shape=(0, y.shape[2]))               # array of shape (0, nr_lags)
-
-    dimensions = range(y.shape[0])  # y.shape[0] = nr. of dimensions
-
-    for dimension in dimensions:
-        y_ch               = y[dimension] # get one dimension
-        corr_ch            = self_pred_per_dim(X, y_ch, alpha=alpha) # compute self-pred per dimension
-        corr_all_dimensions  = np.vstack((corr_all_dimensions, corr_ch))      # stack for all dimensions
-        
-    return corr_all_dimensions
-
-
 # computes the brainscore without saving coefficients per channel:
-def brainscore_no_coef_per_channel(X, y, alpha, print_ind, test_mask = None):
+def brainscore_old_per_channel(X, y, alpha, print_ind, residualise=False, test_mask = None):
     '''
     Params: 
     - X: X matrix for ridge regression of shape (nr of words, GPT-dim + 1)
@@ -526,14 +419,28 @@ def brainscore_no_coef_per_channel(X, y, alpha, print_ind, test_mask = None):
             X_test  = X[test_index]
             y_test  = y[test_index]
 
+            # ---------------------------
+            # 1. Optional residualisation
+            # ---------------------------
+            if residualise:
+                X_train, X_test = residualise_within_fold(X_train, X_test, alpha=alpha)
+
+                # Align y if needed — if you drop the first row of X, 
+                # you must drop the first y too:
+                if len(y_train) > 1:
+                    y_train = y_train[1:]
+                if len(y_test) > 1:
+                    y_test = y_test[1:]
+
+
         
         # initialise Standard Scaler:
         scaler = StandardScaler()
         
         # scale for each fold, such that for X, each dim has mean of 0 and SD of 1:
+        # fit on the training data only and apply to both train and test
         fit     = scaler.fit(X_train)
         X_train = fit.transform(X_train)
-        fit     = scaler.fit(X_test)
         X_test  = fit.transform(X_test)
               
 
@@ -560,7 +467,7 @@ def brainscore_no_coef_per_channel(X, y, alpha, print_ind, test_mask = None):
 
 
 # computes the brainscore without saving coefficients (due to memory concerns) for all channels:
-def brainscore_no_coef(X, y, test_mask = None, alpha=5000):
+def brainscore_old(X, y, residualise=False, test_mask = None, alpha=5000):
     '''
     Params: 
     - X: X matrix for ridge regression of shape (nr of words, GPT-dim + 1)
@@ -575,7 +482,7 @@ def brainscore_no_coef(X, y, test_mask = None, alpha=5000):
     if test_mask is not None and not isinstance(test_mask, list):
         raise ValueError("test_mask must be of type list.")
     
-    print('We are now in the brainscore_no_coef method, and y has shape:')
+    print('We are now in the brainscore method, and y has shape:')
     print(y.shape)
     
     corr_all_channels   = np.empty(shape=(y.shape[0], 10, y.shape[2]))  # array of shape (100, 10, nr_lags)
@@ -584,13 +491,266 @@ def brainscore_no_coef(X, y, test_mask = None, alpha=5000):
 
     for i, channel in enumerate(channels):
         y_ch                       = y[channel] # get one channel
-        corr_all_channels[channel] = brainscore_no_coef_per_channel(X, y_ch, alpha=alpha, print_ind = i, test_mask=test_mask) # compute brainscore per channel
+        corr_all_channels[channel] = brainscore_no_coef_per_channel(X, y_ch, residualise=residualise, alpha=alpha, print_ind = i, test_mask=test_mask) # compute brainscore per channel
         
     return corr_all_channels
 
+
+def brainscore_per_channel(X, y, alpha, print_ind,
+                            residualise=False, indx_top_1=None):
+
+    kf = KFold(n_splits=10)
+    corr_all_folds = np.empty(shape=(10, y.shape[1]))  # y.shape[1] = nr lags
+
+    for nr, (train_index, test_index) in enumerate(kf.split(X)):
+
+        # -----------------------------------------------------
+        # 1. Extract full fold data per split
+        # -----------------------------------------------------
+        X_train_full = X[train_index]
+        y_train_full = y[train_index]
+
+        X_test_full  = X[test_index]
+        y_test_full  = y[test_index]
+
+        # -----------------------------------------------------
+        # 2. Residualise FIRST (preserves adjacency)
+        # -----------------------------------------------------
+        if residualise:
+            X_train_res, X_test_res = residualise_within_fold(
+                X_train_full, X_test_full, alpha=alpha
+            )
+
+            # y must be aligned with X (drop first row)
+            if len(y_train_full) > 1:
+                y_train_res = y_train_full[1:]
+            else:
+                y_train_res = y_train_full
+
+            if len(y_test_full) > 1:
+                y_test_res = y_test_full[1:]
+            else:
+                y_test_res = y_test_full
+
+        else:
+            X_train_res = X_train_full
+            y_train_res = y_train_full
+
+            X_test_res = X_test_full
+            y_test_res = y_test_full
+
+        # -----------------------------------------------------
+        # 3. Apply predictability mask AFTER residualisation
+        # -----------------------------------------------------
+        if indx_top_1 is not None:
+            mask_train = np.isin(train_index, indx_top_1)
+            mask_test  = np.isin(test_index, indx_top_1)
+        else:
+            mask_train = slice(None)
+            mask_test  = slice(None)
+
+        X_train = X_train_res[mask_train]
+        y_train = y_train_res[mask_train]
+
+        X_test  = X_test_res[mask_test]
+        y_test  = y_test_res[mask_test]
+
+        # If a fold has no predictable words → skip (set nan)
+        if len(X_test) == 0 or len(X_train) == 0:
+            corr_all_folds[nr, :] = np.nan
+            continue
+
+        # -----------------------------------------------------
+        # 4. Scale X (train scaler only)
+        # -----------------------------------------------------
+        scaler = StandardScaler()
+        X_train = scaler.fit_transform(X_train)
+        X_test  = scaler.transform(X_test)
+
+        # -----------------------------------------------------
+        # 5. Ridge + correlation per lag
+        # -----------------------------------------------------
+        regression = Ridge(alpha=alpha, fit_intercept=True)
+        regression.fit(X_train, y_train)
+
+        y_hat = regression.predict(X_test)
+
+        # transpose for lag-wise correlation:
+        y_hat = y_hat.T
+        y_test = y_test.T
+
+        corr_all_folds[nr] = [
+            stats.pearsonr(y_hat[lag], y_test[lag]).statistic
+            for lag in range(y_test.shape[0])
+        ]
+
+    return corr_all_folds
+
+def brainscore(X, y, residualise=False, indx_top_1=None, alpha=5000):
+    '''
+    Params: 
+    - X: X matrix for ridge regression of shape (nr of words, GPT-dim + 1)
+    - y: neural data from all channel with 157 lags per epoch. 
+         Shape: (nr of channels, nr of words, 157)
+    - indx_top_1: numpy array of indices of "predictable" words
+    - residualise: whether to remove preceding-word information within each fold
+
+    Returns:
+    - 3D array: correlations for all channels and lags.
+      Shape: (nr_channels, 10, nr_lags)
+    '''
+
+    print('We are now in the brainscore method, and y has shape:')
+    print(y.shape)
     
+    corr_all_channels = np.empty(shape=(y.shape[0], 10, y.shape[2]))
+
+    channels = range(y.shape[0])  # y.shape[0] = nr. of channels
+
+    for i, channel in enumerate(channels):
+        y_ch = y[channel]  # (nr_words, nr_lags)
+
+        corr_all_channels[channel] = brainscore_per_channel(
+            X,
+            y_ch,
+            residualise=residualise,
+            alpha=alpha,
+            print_ind=i,
+            indx_top_1=indx_top_1
+        )
+
+    return corr_all_channels
+
+
 # adds a column of ones for the intercept to GPT's layer activation 
 def make_X(layer_act):
     intercept = np.ones(shape=(layer_act.shape[0]))
     X         = np.column_stack((intercept, layer_act))
     return X
+
+def residualise_within_fold(X_train, X_test, alpha=5000):
+    """
+    Residualise X by regressing X[t] on X[t-1] *within the fold*.
+
+    X_train, X_test: arrays of shape (N, D)
+
+    Returns:
+    - X_train_res, X_test_res: residualised versions of X
+    """
+
+    # Build (previous, current) pairs for training
+    X_prev_train = X_train[:-1]
+    X_curr_train = X_train[1:]
+
+    # Fit regression only on training data
+    reg = Ridge(alpha=alpha, fit_intercept=True)
+    reg.fit(X_prev_train, X_curr_train)
+
+    # Residualise training set
+    X_curr_hat_train = reg.predict(X_prev_train)
+    X_train_res = X_curr_train - X_curr_hat_train
+
+    # For the test set, we must construct (prev, curr) pairs too
+    if len(X_test) > 1:
+        X_prev_test = X_test[:-1]
+        X_curr_test = X_test[1:]
+
+        X_curr_hat_test = reg.predict(X_prev_test)
+        X_test_res = X_curr_test - X_curr_hat_test
+    else:
+        # Degenerate case: test set of size 1
+        X_test_res = X_test.copy()
+
+    return X_train_res, X_test_res
+
+def self_pred_per_dim_CVsafe(X, y, alpha=5000, residualise=False):
+    """
+    X: (N, D)  -- N = nr. of words, D = embedding dimensionality
+    y: (N, L)  -- L = nr. lags
+    """
+
+    kf = KFold(n_splits=10)
+
+    y_hat_all = []
+    y_test_all = []
+
+    for train_idx, test_idx in kf.split(X):
+
+        X_train, X_test = X[train_idx], X[test_idx]
+        y_train, y_test = y[train_idx], y[test_idx]
+
+        # ---------------------------
+        # 1. Optional residualisation
+        # ---------------------------
+        if residualise:
+            X_train, X_test = residualise_within_fold(X_train, X_test, alpha=alpha)
+
+            # Align y if needed — if you drop the first row of X, 
+            # you must drop the first y too:
+            if len(y_train) > 1:
+                y_train = y_train[1:]
+            if len(y_test) > 1:
+                y_test = y_test[1:]
+
+        # ---------------------------
+        # 2. Scale X using train stats
+        # ---------------------------
+        scalerX = StandardScaler()
+        scalerX.fit(X_train)
+
+        X_train = scalerX.transform(X_train)
+        X_test  = scalerX.transform(X_test)
+
+        # ---------------------------
+        # 3. Scale y using train stats
+        # ---------------------------
+        scalerY = StandardScaler()
+        scalerY.fit(y_train)
+
+        y_train = scalerY.transform(y_train)
+        y_test = scalerY.transform(y_test)
+
+        # ---------------------------
+        # 4. Fit ridge
+        # ---------------------------
+        reg = Ridge(alpha=alpha, fit_intercept=True)
+        reg.fit(X_train, y_train)
+
+        # Predict
+        y_hat = reg.predict(X_test)
+
+        y_hat_all.append(y_hat)
+        y_test_all.append(y_test)
+
+    # Concatenate across folds
+    y_hat_all = np.vstack(y_hat_all)
+    y_test_all = np.vstack(y_test_all)
+
+    # Compute per-lag correlation
+    corrs = []
+    for lag in range(y.shape[1]):
+        r = stats.pearsonr(y_hat_all[:, lag], y_test_all[:, lag]).statistic
+        corrs.append(r)
+
+    return corrs
+
+def self_predictability_CVsafe(X, Y, alpha=5000, residualise=False):
+    """
+    X: (N, D)
+    Y: (D, N, L)  -- like in your code: dimension × time × lag
+
+    Returns: array (D, L)
+    """
+    print('Y should have shape (Dim, Nr_Words, Lags), and has shape', Y.shape)
+
+    nr_dims = Y.shape[0]
+    nr_lags = Y.shape[2]
+
+    corr_all = np.empty((nr_dims, nr_lags))
+
+    for d in range(nr_dims):
+        y_d = Y[d]  # shape (N, L)
+        corr_d = self_pred_per_dim_CVsafe(X, y_d, alpha=alpha, residualise=residualise)
+        corr_all[d] = corr_d
+
+    return corr_all
