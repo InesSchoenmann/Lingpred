@@ -41,9 +41,9 @@ ylim_dict = {1: (-0.01, 0.14),
             2: (-0.01, 0.1),
             3: ((-0.01, 0.18))}
 
-acoustic_ylim_dict = {1: (-0.045, 0.14),
-                        2: (-0.01, 0.1),
-                        3: ((-0.01, 0.18))}
+acoustic_ylim_dict = {'Goldstein': (-0.015, 0.38),
+                       'Armeni': (-0.015, 0.51),
+                        'Gwilliams': (-0.015, 0.45)}
 
 
 # -------------------------------------------------- #
@@ -99,36 +99,44 @@ def get_signal_mask(subject=1, model='Glove', dataset='Armani'):
         
     return mask
 
-def get_significant_nonzero_timepoints(corr_dict:dict, subject:int, percentile=95):
-    '''
-    Parameters
-    ----------
-    
-    Returns
-    -------
-    
-    '''
-    significant_TPs_dict = {}
-    
-    for model, corr in corr_dict.items():
-        
-        T_obs, cl, cl_p_vals, H0 = clu = permutation_cluster_1samp_test(reshape(corr[get_signal_mask(subject)]), 
-                                                                        adjacency=False, 
-                                                                        n_jobs=1,
-                                                                        stat_fun=partial(ttest_1samp_no_p),
-                                                                        threshold=dict(start=0,step=0.2),
-                                                                        verbose=True,
-                                                                        n_permutations=10000,
-                                                                        tail=1)
 
-        significant_Tps = [nr for nr, i in zip(times_100, T_obs) if i > np.percentile(H0, percentile)]
+def get_significant_nonzero_timepoints(corr_dict: dict, subject: int, alpha=0.05, plot_acoustics=False):
+    significant_TPs_dict = {}
+
+    for model, corr in corr_dict.items():
+
+        data  = reshape(corr if plot_acoustics else corr[get_signal_mask(subject)])
+
+        print(data.shape)
+
+        T_obs, clusters, cluster_pvals, H0 = permutation_cluster_1samp_test(
+            data,
+            adjacency=False,
+            n_jobs=1,
+            stat_fun=partial(ttest_1samp_no_p),
+            threshold=dict(start=0, step=0.2),
+            n_permutations=10000,
+            tail=1,
+            verbose=True,
+            out_type='mask'
+        )
         
+        # Get significant clusters
+        significant_mask = np.zeros(times_100.shape[0], dtype=bool)
+        
+        for cl, p in zip(clusters, cluster_pvals):
+            if p < alpha:
+                significant_mask = significant_mask | cl
+
+        # Now extract timepoints
+        significant_Tps = list(np.array(times_100)[significant_mask])
         significant_TPs_dict[model] = significant_Tps
-        
+
     return significant_TPs_dict
 
 
-def get_significant_different_timepoints(corr_dict:dict, subject:int, percentile=95, return_all=False):
+
+def get_significant_different_timepoints(corr_dict:dict, subject:int, alpha=0.05, return_all=False):
     '''
     Parameters
     ----------
@@ -147,19 +155,31 @@ def get_significant_different_timepoints(corr_dict:dict, subject:int, percentile
     difference = reshape(corr_1[get_signal_mask(subject)]) - reshape(corr_2[get_signal_mask(subject)])
     difference = difference[:,:79]     
                                                                     
-    T_obs, cl, cl_p_vals, H0 = clu = permutation_cluster_1samp_test(difference, 
+    T_obs, cls, cl_p_vals, H0 = clu = permutation_cluster_1samp_test(difference, 
                                                                     adjacency=False, 
                                                                     n_jobs=1,
                                                                     stat_fun=partial(ttest_1samp_no_p),
                                                                     threshold=dict(start=0,step=0.2),
                                                                     verbose=True,
                                                                     n_permutations=10000,
-                                                                    tail=1)
+                                                                    tail=1, 
+                                                                    out_type='mask')
 
     significant_Tps = [nr for nr, i in zip(times_100[:79], T_obs) if i > np.percentile(H0, percentile)]
 
+
+    # Get significant clusters
+    significant_mask = np.zeros(difference.shape[1], dtype=bool)
+        
+    for cl, p in zip(cls, cl_p_vals):
+        if p < alpha:
+            significant_mask = significant_mask | cl
+
+    # Now extract timepoints
+    significant_Tps = list(np.array(times_100[:79])[significant_mask])
+
     if return_all:
-        return T_obs, cl, cl_p_vals, H0
+        return T_obs, cls, cl_p_vals, H0
     else:   
         return significant_Tps
 
@@ -195,13 +215,11 @@ def plot_base_effect(subject:int, models=['GPT', 'Glove', 'arbitrary'], dataset=
     corr_dict = {}
 
     if plot_acoustic:
-        directory = '/project/3018059.03/Lingpred/results/{}/after_regressing_out_acoustics/'.format(dataset)
+        directory = '../audio/{}/'.format(dataset)
 
-        path = directory + 'corr_acoustic_8_mel_vectors_sub_{}.pkl'.format(subject)
-        corr_dict['Predicting MEG Data (Acoustics)'] = pickle.load(open(path, 'rb'))
+        path = directory + 'Acoustics_without_reoccuring_bigrams_with_original_vectors_{}.pkl'.format(dataset)
+        corr_dict['Arbitrary'] = pickle.load(open(path, 'rb'))['corr_Arbitrary']
         
-        path = directory + 'corr_acoustic_8_mel_vectors_residualised_neural_data_sub_{}.pkl'.format(subject)
-        corr_dict['Predicting Residual MEG Data (Acoustics)'] = pickle.load(open(path, 'rb'))
     else:
         for model in models:
             directory = '/project/3018059.03/Lingpred/results/{}/grand_average/'.format(dataset)
@@ -220,7 +238,7 @@ def plot_base_effect(subject:int, models=['GPT', 'Glove', 'arbitrary'], dataset=
             corr_dict[model] = pickle.load(open(path, 'rb'))
     
     # get their significant timepoints (non-zero): 
-    significant_TPs_dict = get_significant_nonzero_timepoints(corr_dict, subject)
+    significant_TPs_dict = get_significant_nonzero_timepoints(corr_dict, subject, plot_acoustics=plot_acoustic)
     
     if use_regressed_out:
         labels = dict(zip(models, ['Residualised '+m for m in models]))
@@ -231,35 +249,50 @@ def plot_base_effect(subject:int, models=['GPT', 'Glove', 'arbitrary'], dataset=
     fig, ax = plt.subplots(1,1, figsize=(4, 4))
     offset  = -0.009
     
-    for i, (model, corr) in enumerate(corr_dict.items()):
-        ax.plot(times_100, reshape(corr[get_signal_mask(subject)]).mean(axis=0), c=colours[model], label=labels[model])
-        ax.fill_between(times_100, lowerCI(reshape(corr[get_signal_mask(subject)])), 
-                                   upperCI(reshape(corr[get_signal_mask(subject)])), color=colours[model], alpha=0.3)
-        
-        ax.scatter(significant_TPs_dict[model], 
-                   np.repeat(offset, len(significant_TPs_dict[model])), 
-                   marker=(5, 2), s=1, color=colours[model])
-        offset += 0.003
+    if plot_acoustic:
+        offset = - 0.005
+        for i, (model, corr) in enumerate(corr_dict.items()):
+            ax.plot(times_100, reshape(corr).mean(axis=0), c=colours[model], label=labels[model])
+            ax.fill_between(times_100, lowerCI(reshape(corr)), 
+                                    upperCI(reshape(corr)), color=colours[model], alpha=0.3)
+            
+            ax.scatter(significant_TPs_dict[model], 
+                    np.repeat(offset, len(significant_TPs_dict[model])), 
+                    marker=(5, 2), s=1, color=colours[model])
+            
+    else:     
+        for i, (model, corr) in enumerate(corr_dict.items()):
+            ax.plot(times_100, reshape(corr[get_signal_mask(subject)]).mean(axis=0), c=colours[model], label=labels[model])
+            ax.fill_between(times_100, lowerCI(reshape(corr[get_signal_mask(subject)])), 
+                                    upperCI(reshape(corr[get_signal_mask(subject)])), color=colours[model], alpha=0.3)
+            
+            ax.scatter(significant_TPs_dict[model], 
+                    np.repeat(offset, len(significant_TPs_dict[model])), 
+                    marker=(5, 2), s=1, color=colours[model])
+            offset += 0.003
         
     ax.set_xlabel('Time in Seconds')
     ax.set_ylabel('Crossvalidated Correlation')
     ax.set_ylim(ylim_dict[subject])
     if plot_acoustic:
-        ax.set_ylim(acoustic_ylim_dict[subject])
+        ax.set_ylim(acoustic_ylim_dict[dataset])
     ax.axvspan(-.050, .050, color='gray',  alpha=0.3)
     ax.axhline(c='indianred',  alpha=0.3)
     if legend:
-        ax.legend()
+        ax.legend(fontsize=12)
 
     if subject==1:
-        fig_folder = 'Lingpred/figures/main/'
+        fig_folder = '../figures/main/'
     else:
-        fig_folder = 'Lingpred/figures/supplementary/'
+        fig_folder = '../figures/supplementary/'
     fig_path = fig_folder+'base_effect-subject_{}-residualised_{}.pdf'.format(subject, use_regressed_out)
     if use_bigrams_removed:
-        fig_path = fig_folder+'base_effect-subject_{}-bigrams_removed-residualised_{}.pdf'.format(subject, use_regressed_out)
+        if plot_acoustic: 
+            fig_path = fig_folder+'base_effect-bigrams_removed_{}_acoustic.pdf'.format(dataset)
+        else:
+            fig_path = fig_folder+'base_effect-subject_{}-bigrams_removed-residualised_{}.pdf'.format(subject, use_regressed_out)
 
-    if not (use_residualised_neural_data or plot_acoustic): # those are not part of any figures, neither main nor supplementary
+    if not (use_residualised_neural_data): # those are not part of any figures, neither main nor supplementary
         plt.savefig(fig_path, format='pdf', bbox_inches='tight')
         
 
