@@ -221,7 +221,7 @@ def get_onsets_offsets_per_run(dataset:str, subject:int, session:int, run:int, t
     '''
     Params:
     - raw_data object
-    - dataset: dataset for which the offsets are supposed to be loaded: Gwilliams, Armani or sherlock
+    - dataset: dataset for which the offsets are supposed to be loaded: Gwilliams, Armeni or sherlock
     - subject: subject for which the offsets are supposed to be loaded
     - session: session for which the offsets are supposed to be loaded
     - run: run for which the offsets are supposed to be loaded
@@ -231,7 +231,7 @@ def get_onsets_offsets_per_run(dataset:str, subject:int, session:int, run:int, t
     - pandas data frame with at least with 3 columns: phoneme, onset  
     
     '''
-    if dataset == 'Armani':
+    if dataset == 'Armeni':
         
         # handle naming of session 10: 
         if session < 10:
@@ -240,7 +240,7 @@ def get_onsets_offsets_per_run(dataset:str, subject:int, session:int, run:int, t
             sess = '0' + str(session)
         
         # get path to events file:
-        dir_path = '/project/3018059.03/Lingpred/data/Armani/'
+        dir_path = '../Lingpred/data/Armeni/'
         filepath = 'sub-00' + str(subject) +'/' + 'ses-' + sess +'/'+ 'meg/'
         filename = 'sub-00' + str(subject) + '_ses-' + sess + '_task-compr_events.tsv'
         
@@ -280,11 +280,11 @@ def get_onsets_offsets_per_run(dataset:str, subject:int, session:int, run:int, t
         
     if dataset == 'Gwilliams':
         
-        path_dir = '/project/3018059.03/Lingpred/data/Gwilliams/'
+        path_dir = '../Lingpred/data/Gwilliams/'
         file_name = 'annotation_task_'+ task + '.tsv'
         
         # read pandas DataFrame and keep only sentences (not word lists):
-        annotations = pd.read_csv(path_dir+file_name, sep='\t')
+        annotations = pd.read_csv(path_dir+file_name, sep='\t', dtype={'word': 'string'})
         annotations = annotations[annotations['condition']=='sentence']
         
         # keep only this run
@@ -316,7 +316,7 @@ def get_onsets_offsets_per_run(dataset:str, subject:int, session:int, run:int, t
         if only_word_inital_phonemes:
             df_phonemes = df_phonemes[df_phonemes.start.isin(word_onsets)]
         
-    else: raise ValueError('Dataset variable must be "Armani" or Gwilliams')
+    else: raise ValueError('Dataset variable must be "Armeni" or Gwilliams')
     
     if phonemes:
         return df_phonemes
@@ -356,7 +356,7 @@ def get_phonemes_onsets_offsets(dataset:str, subject:int, session:int, run:int, 
     '''
     Params:
     - raw_data object
-    - dataset: dataset for which the offsets are supposed to be loaded: Gwilliams, Armani or sherlock
+    - dataset: dataset for which the offsets are supposed to be loaded: Gwilliams, Armeni or sherlock
     - subject: subject for which the offsets are supposed to be loaded
     - session: session for which the offsets are supposed to be loaded
     - run: run for which the offsets are supposed to be loaded
@@ -366,7 +366,7 @@ def get_phonemes_onsets_offsets(dataset:str, subject:int, session:int, run:int, 
     - pandas data frame with at least with 3 columns: phoneme, onset  
     
     '''
-    if dataset == 'Armani':
+    if dataset == 'Armeni':
         
         # handle naming of session 10: 
         if session < 10:
@@ -375,7 +375,7 @@ def get_phonemes_onsets_offsets(dataset:str, subject:int, session:int, run:int, 
             sess = '0' + str(session)
         
         # get path to events file:
-        dir_path = '/project/3018059.03/Lingpred/data/Armani/'
+        dir_path = '../Lingpred/data/Armeni/'
         filepath = 'sub-00' + str(subject) +'/' + 'ses-' + sess +'/'+ 'meg/'
         filename = 'sub-00' + str(subject) + '_ses-' + sess + '_task-compr_events.tsv'
         
@@ -415,7 +415,7 @@ def get_phonemes_onsets_offsets(dataset:str, subject:int, session:int, run:int, 
         
     if dataset == 'Gwilliams':
         
-        path_dir = '/project/3018059.03/Lingpred/data/Gwilliams/'
+        path_dir = '../Lingpred/data/Gwilliams/'
         file_name = 'annotation_task_'+ task + '.tsv'
         
         # read pandas DataFrame and keep only sentences (not word lists):
@@ -476,7 +476,7 @@ def get_words_onsets_offsets(dataset:str, subject:int, session:int, run:int, tas
     '''
     Params:
     - raw_data object
-    - dataset: dataset for which the offsets are supposed to be loaded: Gwilliams, Armani or sherlock
+    - dataset: dataset for which the offsets are supposed to be loaded: Gwilliams, Armeni or sherlock
     - subject: subject for which the offsets are supposed to be loaded
     - session: session for which the offsets are supposed to be loaded
     - run: run for which the offsets are supposed to be loaded
@@ -532,7 +532,7 @@ def get_words_onsets_offsets(dataset:str, subject:int, session:int, run:int, tas
         
     if dataset == 'Gwilliams':
         
-        path_dir = '/project/3018059.03/data/Gwilliams/'
+        path_dir = '../data/Gwilliams/'
         file_name = 'annotation_task_'+ task + '.tsv'
         
         # read pandas DataFrame and keep only sentences (not word lists):
@@ -667,7 +667,7 @@ def make_y_matrix_per_run(X, indices, acoustic_model=False, use_random_vector_at
 # function to make a pickle file name for saving based on the parameters:
 def make_filename(dataset, subject, session, band, layer, Goldstein, datatype, channels, baseline, window_size):
     
-    folder = '/project/3018059.03/Lingpred/results/' + dataset + '/'
+    folder = '../Lingpred/results/' + dataset + '/'
     
     filename = 'subject-' + str(subject) + '_session-' + str(session) + '_band-' + str(band) +'_layer-' + str(layer) + '_goldstein-' + str(Goldstein) + '_datatype-' + datatype + '_channels-' + channels + 'baselinecorr-'+ str(baseline)+ '_window_size-'+ str(window_size) +'.pkl' 
     

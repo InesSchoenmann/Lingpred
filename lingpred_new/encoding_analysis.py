@@ -18,7 +18,7 @@ import gpt2
 import lingpred_new
 
 # wrapper functions for the Armeni dataset for the different models:
-def compute_corr(subjects:list, sessions:list, model:str, regress_out=True, bigrams_removed=False):
+def compute_corr(subjects:list, sessions:list, model:str, regress_out=True, bigrams_removed=False, residualise=False):
 
     warnings.simplefilter(action='ignore')
 
@@ -31,15 +31,14 @@ def compute_corr(subjects:list, sessions:list, model:str, regress_out=True, bigr
     if model=='gpt':
         compute_corr_gpt(subjects, sessions, regress_out=regress_out, bigrams_removed=bigrams_removed)
 
+def compute_corr_glove(subjects, sessions, regress_out=False, bigrams_removed=False):
 
-def compute_corr_glove(subjects, sessions, regress_out=True, bigrams_removed=False):
-
-    project_dir = '/project/3018059.03/Lingpred'
+    project_dir = '../Lingpred'
 
     for subject in subjects:
 
         # load neural data:
-        subject_dir = project_dir + '/data/Armani/sub-00{}/'.format(subject)
+        subject_dir = project_dir + '/data/Armeni/sub-00{}/'.format(subject)
         file_path   = subject_dir + 'y_all_language.pkl'
         y_all       = pickle.load(open(file_path, 'rb'))
 
@@ -50,7 +49,7 @@ def compute_corr_glove(subjects, sessions, regress_out=True, bigrams_removed=Fal
 
         for session in sessions:
             df_words = lingpred_new.io.get_words_onsets_offsets(None, 
-                                                        dataset='Armani', 
+                                                        dataset='Armeni', 
                                                         subject=subject, 
                                                         session=session, 
                                                         run=1)
@@ -70,6 +69,7 @@ def compute_corr_glove(subjects, sessions, regress_out=True, bigrams_removed=Fal
 
         print(y_all.shape, Glove_vectors.shape)
 
+        '''
         if regress_out and bigrams_removed:
             bigram_mask   = lingpred_new.utils.get_bigram_mask(df_words_all)
             y_all         = y_all[:,bigram_mask,:] # drop bigrams
@@ -91,28 +91,25 @@ def compute_corr_glove(subjects, sessions, regress_out=True, bigrams_removed=Fal
             bigram_mask   = lingpred_new.utils.get_bigram_mask(df_words_all)
             Glove_vectors = Glove_vectors[bigram_mask]
             y_all         = y_all[:,bigram_mask,:]
-            print(y_all.shape, Glove_vectors.shape)
+            print(y_all.shape, Glove_vectors.shape)'''
 
-        #saving results:
-        filename = 'Glove_vectors_sub_{}.pkl'.format(subject)
-        if regress_out and bigrams_removed:
-            filename = 'regressed_out_one_bigrams_removed_Glove_vectors_sub_{}.pkl'.format(subject)
-        elif regress_out:
-            filename = 'regressed_out_one_Glove_vectors_sub_{}.pkl'.format(subject)
-        elif bigrams_removed:
-            filename = 'bigrams_removed_Glove_vectors_sub_{}.pkl'.format(subject)
-
+        # saving vectors:
+        filename  = 'Glove_vectors_sub_{}.pkl'.format(subject)
         file_path = subject_dir + filename
         f         = open(file_path,"wb")
         pickle.dump(Glove_vectors,f)
         f.close()
 
+        if bigrams_removed:
+            bigrams_mask = lingpred_new.utils.get_bigram_mask(df_words_all)
+        else:
+            bigrams_mask = None
 
         # compute brainscore:
-        corr = brainscore_no_coef(y= y_all, X = Glove_vectors)
+        corr = brainscore(y= y_all, X = Glove_vectors, residualise=regress_out, indx_top_1=bigrams_mask)
 
         #saving results:
-        results_dir = project_dir + '/results/Armani/grand_average/'
+        results_dir = project_dir + '/results/Armeni/grand_average/'
         filename    = 'corr_Glove_vectors_sub_{}.pkl'.format(subject)
         if regress_out and bigrams_removed:
             filename = 'corr_regressed_out_one_bigrams_removed_Glove_vectors_sub_{}.pkl'.format(subject)
@@ -129,12 +126,12 @@ def compute_corr_glove(subjects, sessions, regress_out=True, bigrams_removed=Fal
 
 def compute_corr_arbitrary(subjects, sessions, regress_out=True, bigrams_removed=False):
 
-    project_dir = '/project/3018059.03/Lingpred'
+    project_dir = '../Lingpred'
 
     for subject in subjects:
 
         # load neural data:
-        subject_dir = project_dir + '/data/Armani/sub-00{}/'.format(subject)
+        subject_dir = project_dir + '/data/Armeni/sub-00{}/'.format(subject)
         file_path   = subject_dir + 'y_all_language.pkl'
         y_all       = pickle.load(open(file_path, 'rb'))
 
@@ -161,7 +158,7 @@ def compute_corr_arbitrary(subjects, sessions, regress_out=True, bigrams_removed
 
         print(y_all.shape, arbitrary_vectors.shape)
 
-        if regress_out and bigrams_removed:
+        '''if regress_out and bigrams_removed:
             bigram_mask       = lingpred_new.utils.get_bigram_mask(df_words_all)
             y_all             = y_all[:,bigram_mask,:] # drop bigrams
             y_all             = y_all[:,1:,:]          # drop first
@@ -182,26 +179,25 @@ def compute_corr_arbitrary(subjects, sessions, regress_out=True, bigrams_removed
             bigram_mask       = lingpred_new.utils.get_bigram_mask(df_words_all)
             arbitrary_vectors = arbitrary_vectors[bigram_mask]
             y_all             = y_all[:,bigram_mask,:]
-            print(y_all.shape, arbitrary_vectors.shape)
+            print(y_all.shape, arbitrary_vectors.shape)'''
 
         #saving vectors:
-        filename = 'arbitrary_vectors_sub_{}.pkl'.format(subject)
-        if regress_out and bigrams_removed:
-            filename = 'regressed_out_one_bigrams_removed_arbitrary_vectors_sub_{}.pkl'.format(subject)
-        elif regress_out:
-            filename = 'regressed_out_one_arbitrary_vectors_sub_{}.pkl'.format(subject)
-        elif bigrams_removed:
-            filename = 'bigrams_removed_arbitrary_vectors_sub_{}.pkl'.format(subject)
-
+        filename  = 'arbitrary_vectors_sub_{}.pkl'.format(subject)
         file_path = subject_dir + filename
         f         = open(file_path,"wb")
         pickle.dump(arbitrary_vectors,f)
         f.close()
         
-        corr = brainscore_no_coef(y= y_all, X = arbitrary_vectors)
+
+        if bigrams_removed:
+            bigrams_mask = lingpred_new.utils.get_bigram_mask(df_words_all)
+        else:
+            bigrams_mask = None
+            
+        corr = brainscore(y= y_all, X = arbitrary_vectors, residualise=regress_out, indx_top_1=bigrams_mask)
 
         #saving results:
-        results_dir = project_dir + '/results/Armani/grand_average/'
+        results_dir = project_dir + '/results/Armeni/grand_average/'
         filename    = 'corr_arbitrary_vectors_sub_{}.pkl'.format(subject)
 
         if regress_out and bigrams_removed:
@@ -219,12 +215,12 @@ def compute_corr_arbitrary(subjects, sessions, regress_out=True, bigrams_removed
 
 def compute_corr_gpt(subjects, sessions, regress_out=True, bigrams_removed=False):
 
-    project_dir = '/project/3018059.03/Lingpred'
+    project_dir = '../Lingpred'
 
     for subject in subjects:
 
         # load neural data:
-        subject_dir = project_dir + '/data/Armani/sub-00{}/'.format(subject)
+        subject_dir = project_dir + '/data/Armeni/sub-00{}/'.format(subject)
         file_path   = subject_dir + 'y_all_language.pkl'
         y_all       = pickle.load(open(file_path, 'rb'))
 
@@ -255,7 +251,7 @@ def compute_corr_gpt(subjects, sessions, regress_out=True, bigrams_removed=False
 
         print(y_all.shape, GPT_vectors.shape)
 
-
+        '''
         if regress_out and bigrams_removed:
             bigram_mask = lingpred_new.utils.get_bigram_mask(df_words_all)
             y_all       = y_all[:,bigram_mask,:] # drop bigrams
@@ -277,26 +273,26 @@ def compute_corr_gpt(subjects, sessions, regress_out=True, bigrams_removed=False
             bigram_mask = lingpred_new.utils.get_bigram_mask(df_words_all)
             GPT_vectors = GPT_vectors[bigram_mask]
             y_all       = y_all[:,bigram_mask,:]
-            print(y_all.shape, GPT_vectors.shape)
+            print(y_all.shape, GPT_vectors.shape)'''
 
         #saving vectors:
-        filename = 'GPT_vectors_sub_{}.pkl'.format(subject)
-        if regress_out and bigrams_removed:
-            filename = 'regressed_out_one_bigrams_removed_GPT_vectors_sub_{}.pkl'.format(subject)
-        elif regress_out:
-            filename = 'regressed_out_one_GPT_vectors_sub_{}.pkl'.format(subject)
-        elif bigrams_removed:
-            filename = 'bigrams_removed_GPT_vectors_sub_{}.pkl'.format(subject)
-
+        filename  = 'GPT_vectors_sub_{}.pkl'.format(subject)
         file_path = subject_dir + filename
         f         = open(file_path,"wb")
         pickle.dump(GPT_vectors,f)
         f.close()
+
+        # get the bigrams mask if we only want to keep the first occurrance of each bigram:
+        if bigrams_removed:
+            bigrams_mask = lingpred_new.utils.get_bigram_mask(df_words_all)
+        else:
+            bigrams_mask = None
         
-        corr = brainscore_no_coef(y= y_all, X = GPT_vectors)
+        # compute the correlation
+        corr = brainscore(y= y_all, X = GPT_vectors, residualise=regress_out, indx_top_1=bigrams_mask)
 
         #saving results:
-        results_dir = project_dir + '/results/Armani/grand_average/'
+        results_dir = project_dir + '/results/Armeni/grand_average/'
         filename    = 'corr_GPT_vectors_sub_{}.pkl'.format(subject)
         if regress_out and bigrams_removed:
             filename = 'corr_regressed_out_one_bigrams_removed_GPT_vectors_sub_{}.pkl'.format(subject)
@@ -749,8 +745,8 @@ def self_predictability_CVsafe(X, Y, alpha=5000, residualise=False):
     corr_all = np.empty((nr_dims, nr_lags))
 
     for d in range(nr_dims):
-        y_d = Y[d]  # shape (N, L)
-        corr_d = self_pred_per_dim_CVsafe(X, y_d, alpha=alpha, residualise=residualise)
+        y_d         = Y[d]  # shape (N, L)
+        corr_d      = self_pred_per_dim_CVsafe(X, y_d, alpha=alpha, residualise=residualise)
         corr_all[d] = corr_d
 
     return corr_all

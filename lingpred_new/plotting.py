@@ -77,7 +77,7 @@ def reshape(x):
     '''
     return x.reshape(-1, x.shape[-1])
 
-def get_signal_mask(subject=1, model='Glove', dataset='Armani'):
+def get_signal_mask(subject=1, model='Glove', dataset='Armeni'):
     '''
     Parameters
     ----------
@@ -86,14 +86,14 @@ def get_signal_mask(subject=1, model='Glove', dataset='Armani'):
     -------
     
     '''
-    if dataset =='Armani':
-        directory = '/project/3018059.03/Lingpred/data/Armani/sub-00{}/'.format(subject)
+    if dataset =='Armeni':
+        directory = '../data/Armeni/sub-00{}/'.format(subject)
         filename  = directory + 'masks_sources_signal_Glove_GPT.pkl'
         mask      = pickle.load(open(filename, 'rb'))
         mask      = mask['signal_mask_{}'.format(model)]
     
     if dataset == 'Gwilliams':
-        directory = '/project/3018059.03/Lingpred/data/Gwilliams/'
+        directory = '../data/Gwilliams/'
         filename  = directory + 'signal_masks_all_subjects_Glove_based.pkl'
         mask      = pickle.load(open(filename, 'rb'))
         
@@ -185,9 +185,9 @@ def get_significant_different_timepoints(corr_dict:dict, subject:int, alpha=0.05
 
 
 
-def plot_base_effect(subject:int, models=['GPT', 'Glove', 'arbitrary'], dataset='Armani', legend=True, 
+def plot_base_effect(subject:int, models=['GPT', 'Glove', 'arbitrary'], dataset='Armeni', legend=True, 
                      use_regressed_out=False, use_bigrams_removed=False, use_residualised_neural_data=False, 
-                     plot_acoustic=False):
+                     plot_acoustic=False, savefig=False):
     '''
     Creates a plot for a single subject, showing all models in the list
     
@@ -222,7 +222,7 @@ def plot_base_effect(subject:int, models=['GPT', 'Glove', 'arbitrary'], dataset=
         
     else:
         for model in models:
-            directory = '/project/3018059.03/Lingpred/results/{}/grand_average/'.format(dataset)
+            directory = '../results/{}/grand_average/'.format(dataset)
             path      = directory + 'corr_{}_vectors_sub_{}.pkl'.format(model, subject)
 
             if use_regressed_out and use_bigrams_removed:
@@ -232,7 +232,7 @@ def plot_base_effect(subject:int, models=['GPT', 'Glove', 'arbitrary'], dataset=
             elif use_bigrams_removed:
                 path = directory + 'corr_bigrams_removed_{}_vectors_sub_{}.pkl'.format(model, subject)
             elif use_residualised_neural_data:
-                directory = '/project/3018059.03/Lingpred/results/{}/after_regressing_out_acoustics/'.format(dataset)
+                directory = '../results/{}/after_regressing_out_acoustics/'.format(dataset)
                 path = directory + 'corr_regressed_out_one_{}_vectors_sub_{}.pkl'.format(model, subject)
             
             corr_dict[model] = pickle.load(open(path, 'rb'))
@@ -241,7 +241,7 @@ def plot_base_effect(subject:int, models=['GPT', 'Glove', 'arbitrary'], dataset=
     significant_TPs_dict = get_significant_nonzero_timepoints(corr_dict, subject, plot_acoustics=plot_acoustic)
     
     if use_regressed_out:
-        labels = dict(zip(models, ['Residualised '+m for m in models]))
+        labels = dict(zip(models, ['Residual '+m for m in models]))
     else: 
         labels = dict(zip(models, models))
 
@@ -293,13 +293,14 @@ def plot_base_effect(subject:int, models=['GPT', 'Glove', 'arbitrary'], dataset=
             fig_path = fig_folder+'base_effect-subject_{}-bigrams_removed-residualised_{}.pdf'.format(subject, use_regressed_out)
 
     if not (use_residualised_neural_data): # those are not part of any figures, neither main nor supplementary
-        plt.savefig(fig_path, format='pdf', bbox_inches='tight')
+        if savefig:
+            plt.savefig(fig_path, format='pdf', bbox_inches='tight')
         
 
 def plot_prediction_split(subject:int, prediction='Top 3', not_prediction= 'Top 3', 
                           use_splitting_during_testing = False, 
                           use_regressed_out_Glove= False, 
-                          dataset='Armani', legend=True):
+                          dataset='Armeni', legend=True, savefig=False):
     '''
     Creates a plot for a single subject, showing all models in the list
     
@@ -316,7 +317,7 @@ def plot_prediction_split(subject:int, prediction='Top 3', not_prediction= 'Top 
     - use_regressed_out_Glove: boolean
         whether to plot prediction split with the residualised GloVe vectors
     - dataset: string
-        Which dataset to plot 'Armani' or 'Gwilliams'
+        Which dataset to plot 'Armeni' or 'Gwilliams'
     -legend: boolean
         whether to plot a legend for this plot
         
@@ -340,7 +341,7 @@ def plot_prediction_split(subject:int, prediction='Top 3', not_prediction= 'Top 
                         'Top 10': 'corr_not_top_10'}
         
     # load the dictionary with the correlations:
-    directory      = '/project/3018059.03/Lingpred/results/{}/correct_incorrect_predictions/'.format(dataset)
+    directory      = '../results/{}/correct_incorrect_predictions/'.format(dataset)
     #path           = directory + 'prediction_split_sub_{}_Glove.pkl'.format(subject)
     #corr_dict_1_10 = pickle.load(open(path, 'rb'))
     #path           = directory + 'prediction_split_top_3_and_5_sub_{}_Glove.pkl'.format(subject)
@@ -440,18 +441,20 @@ def plot_prediction_split(subject:int, prediction='Top 3', not_prediction= 'Top 
     fig_path = fig_folder+'prediction_split-subject_{}-residualised_Glove_{}-{}.pdf'.format(subject, 
                                                                                             use_regressed_out_Glove, 
                                                                                             prediction)
-    if not use_splitting_during_testing or use_uneven_trials:
-        plt.savefig(fig_path, format='pdf', bbox_inches='tight')
+    if not use_splitting_during_testing:
+        if savefig:
+            plt.savefig(fig_path, format='pdf', bbox_inches='tight')
 
 
-def plot_predicting_acoustics(dataset='Armani', 
+def plot_predicting_acoustics(dataset='Armeni', 
                               plot_split=False, 
                               top=1, 
                               vectors='Glove', 
                               countinuous_spectrogram = False,
                               use_regressed_out=True,
                               plot_post_onset=False,
-                              bigrams_removed = False):
+                              bigrams_removed = False,
+                              savefig=False):
 
     if countinuous_spectrogram:
         type_of_acoustic_y_matrix = 'neural_data'
@@ -464,7 +467,7 @@ def plot_predicting_acoustics(dataset='Armani',
             vectors = '_'+vectors
 
     # load results:
-    results_dir      = '/project/3018059.03/Lingpred/results/{}/Predicting_acoustics/'.format(dataset)
+    results_dir      = '../results/{}/Predicting_acoustics/'.format(dataset)
     results_file_name= 'regressed_out_vectors_GPT_Glove_arbitrary_y_matrix_like_{}'.format(type_of_acoustic_y_matrix)
     if not use_regressed_out:
         results_file_name= 'original_vectors_GPT_Glove_arbitrary_y_matrix_like_{}'.format(type_of_acoustic_y_matrix)
@@ -517,32 +520,31 @@ def plot_predicting_acoustics(dataset='Armani',
                                     upperCI(reshape(results[key][:, :, :])), color=colours[models[i]], alpha=0.3)
 
 
-    ax1.legend()
+    ax1.legend(fontsize=12)
     #ax1.set_ylim([-0.005, 0.05])
     ax1.set_xlabel('Time in Seconds', fontsize=12)
     ax1.set_ylabel('Cross-validated Correlation', fontsize=12)
     ax1.axhline(c='indianred',  alpha=0.3)
     #ax1.set_title(dataset+':' + vectors)
 
-    if top==1 and dataset=='Armani':
-        fig_folder = 'Lingpred/figures/main/'
+    if top==1 and dataset=='Armeni':
+        fig_folder = '../figures/main/'
         if not use_regressed_out:
-            fig_folder = 'Lingpred/figures/supplementary/'       
+            fig_folder = '../figures/supplementary/'       
     else:
-        fig_folder = 'Lingpred/figures/supplementary/'
-
+        fig_folder = '../figures/supplementary/'
     fig_path = fig_folder+'Acoustics_{}_with_residualised_vectors_{}-prediction_split_{}-top_{}.pdf'.format(dataset,
                                                                                                   use_regressed_out,
                                                                                                   plot_split, 
                                                                                                   top)
-    if plot_post_onset:
-        fig_path = fig_folder+'Acoustics_{}_with_residualised_vectors_{}-prediction_split_{}-top_{}_with_post_onset.pdf'.format(dataset,
+    if bigrams_removed:
+        fig_path = fig_folder+'Acoustics_{}_with_residualised_vectors_{}-prediction_split_{}-top_{}_bigrams_removed.pdf'.format(dataset,
                                                                                                                                 use_regressed_out,
                                                                                                                                 plot_split, 
                                                                                                                                 top)
     
-
-    plt.savefig(fig_path, format='pdf',bbox_inches='tight')
+    if savefig:
+        plt.savefig(fig_path, format='pdf',bbox_inches='tight')
 
 
 def get_and_threshold_Gwilliams_base_results(use_regressed_out=False):
@@ -554,7 +556,7 @@ def get_and_threshold_Gwilliams_base_results(use_regressed_out=False):
         res_type = 'Grand-Avg/'
 
     # get file names:
-    res_dir    = '/project/3018059.03/Lingpred/results/Gwilliams/'
+    res_dir    = '../results/Gwilliams/'
     path       = res_dir + res_type
     file_names = [f for f in listdir(path) if isfile(join(path, f))]
 
@@ -621,7 +623,7 @@ def get_and_threshold_Gwilliams_prediction_split(use_regressed_out=False):
         res_type = 'correct_incorrect_predictions/'
 
     # get file names:
-    res_dir    = '/project/3018059.03/Lingpred/results/Gwilliams/'
+    res_dir    = '../results/Gwilliams/'
     path       = res_dir + res_type
     file_names = [f for f in listdir(path) if isfile(join(path, f))]
 
@@ -669,7 +671,7 @@ def get_and_threshold_Gwilliams_prediction_split(use_regressed_out=False):
     return corr_dict
 
 
-def plot_base_effect_Gwilliams(use_regressed_out=False):
+def plot_base_effect_Gwilliams(use_regressed_out=False, savefig=False):
         
     corr_dict = get_and_threshold_Gwilliams_base_results(use_regressed_out=use_regressed_out)
     
@@ -695,11 +697,12 @@ def plot_base_effect_Gwilliams(use_regressed_out=False):
     fig_folder = 'Lingpred/figures/supplementary/'
     fig_path   = fig_folder+'base_effect-Gwilliams_data-residualised_{}.pdf'.format(use_regressed_out)
 
-    plt.savefig(fig_path, format='pdf', bbox_inches='tight')
+    if savefig:
+        plt.savefig(fig_path, format='pdf', bbox_inches='tight')
     plt.show()
         
         
-def plot_prediction_split_Gwilliams(use_regressed_out=False, top=5):
+def plot_prediction_split_Gwilliams(use_regressed_out=False, top=5, savefig=False):
         
     corr_dict = get_and_threshold_Gwilliams_prediction_split(use_regressed_out=use_regressed_out)
     
@@ -733,14 +736,14 @@ def plot_prediction_split_Gwilliams(use_regressed_out=False, top=5):
     fig_folder = 'Lingpred/figures/supplementary/'
     fig_path = fig_folder+'prediction_split-Gwilliams_data-residualised_{}-Top_{}.pdf'.format(use_regressed_out, 
                                                                                               top)
-
-    plt.savefig(fig_path, format='pdf', bbox_inches='tight')
+    if savefig:
+        plt.savefig(fig_path, format='pdf', bbox_inches='tight')
     plt.show()
     
 
 def get_quantifications_prediction_split(subject:int, prediction='Top 1', 
                                         use_regressed_out_Glove= False, 
-                                        dataset='Armani'):
+                                        dataset='Armeni'):
     '''
     Prints quanitfications of the difference between predicted and unpredicted words' encodings
     
@@ -753,7 +756,7 @@ def get_quantifications_prediction_split(subject:int, prediction='Top 1',
     - use_regressed_out_Glove: boolean
         whether to plot prediction split with the residualised GloVe vectors
     - dataset: string
-        Which dataset to plot 'Armani' or 'Gwilliams'
+        Which dataset to plot 'Armeni' or 'Gwilliams'
         
     Returns:
     --------
@@ -779,7 +782,7 @@ def get_quantifications_prediction_split(subject:int, prediction='Top 1',
                         'Top 10': 'corr_not_top_10'}
         
     # load the dictionary with the correlations:
-    directory      = '/project/3018059.03/Lingpred/results/{}/correct_incorrect_predictions/'.format(dataset)
+    directory      = '../results/{}/correct_incorrect_predictions/'.format(dataset)
     
     if prediction=='Top 3':
         path = directory + 'prediction_split_top_3_sub_{}_Glove_without_same_nr_of_trials.pkl'.format(subject)
@@ -888,11 +891,12 @@ def get_quantifications_prediction_split(subject:int, prediction='Top 1',
     print('-'*40)
     print('The maximum p value for all significant timepoint is: ', np.max(significant_pvals))
 
-def plot_selfpredictability(dataset = 'Armani', plot_split = False, top=1, bigrams_removed = False):
+def plot_selfpredictability(dataset = 'Armeni', plot_split = False, top=1, 
+                            bigrams_removed = False, savefig=False):
     
-    dir_path = '/project/3018059.03/Lingpred/results/{}/self_predictability/'.format(dataset)
+    dir_path = '../results/{}/self_predictability/'.format(dataset)
     if plot_split: 
-        if dataset == 'Armani':
+        if dataset == 'Armeni':
             file = 'new_in_correct_selfpredictability_Glove_first_session.pkl'
             if top==1:
                 file = 'new_in_correct_selfpredictability_Glove_top_1_first_session_1.pkl'
@@ -901,12 +905,14 @@ def plot_selfpredictability(dataset = 'Armani', plot_split = False, top=1, bigra
             if top==1:
                 file = 'new_in_correct_selfpredictability_Glove_top_1.pkl'
     else:
-        if dataset == 'Armani':
+        if dataset == 'Armeni':
             file = 'Glove_GPT_Arbitrary_session_1.pkl'
             if bigrams_removed:
                 file = 'bigrams_removed_Glove_GPT_Arbitrary_session_1.pkl'
         if dataset == 'Gwilliams':
             file = 'GPT_Glove_arbitrary.pkl'
+            if bigrams_removed:
+                file = 'bigrams_removed_Glove_GPT_arbitrary.pkl'
     path     = dir_path + file   
     corr_dict= pickle.load(open(path, 'rb'))
     
@@ -926,27 +932,31 @@ def plot_selfpredictability(dataset = 'Armani', plot_split = False, top=1, bigra
                                    upperCI(reshape(corr_dict[key])[:, 0:78]), color=colours[model], alpha=0.3)
         
         
-    ax.set_xlabel('Time in Seconds')
-    ax.set_ylabel('Crossvalidated Correlation')
+    ax.set_xlabel('Time in Seconds', fontsize=12)
+    ax.set_ylabel('Crossvalidated Correlation', fontsize=12)
     ax.axhline(c='indianred',  alpha=0.3)
-    ax.legend()
+    ax.legend(fontsize=12)
 
-    fig_folder = 'Lingpred/figures/supplementary/'
+    fig_folder = '../figures/supplementary/'
 
-    if dataset == 'Armani':
+    if dataset == 'Armeni':
         if plot_split ==False:
-            fig_folder = 'Lingpred/figures/main/'
+            fig_folder = '../figures/main/'
         if plot_split == True and top==1:
-            fig_folder = 'Lingpred/figures/main/'
+            fig_folder = '../figures/main/'
+    if bigrams_removed:
+        filename = 'Selfpredictability-{}-prediction_split_{}-top_{}_bigrams_removed.pdf'.format(dataset, plot_split, top)
+    else:
+        filename = 'Selfpredictability-{}-prediction_split_{}-top_{}.pdf'.format(dataset, plot_split, top)
+    fig_path = fig_folder + filename
 
-    fig_path = fig_folder+'Selfpredictability-{}-prediction_split_{}-top_{}.pdf'.format(dataset, plot_split, top)
-
-    plt.savefig(fig_path, format='pdf', bbox_inches='tight')
+    if savefig:
+        plt.savefig(fig_path, format='pdf', bbox_inches='tight')
         
-def plot_regressed_out_selfpredictability():
+def plot_regressed_out_selfpredictability(savefig=False):
     
     # get the results:
-    dir_path       = '/project/3018059.03/Lingpred/results/Armani/X-Y-Flip/'
+    dir_path       = '../results/Armeni/self_predictability/'
     corr_Glove     = corr_dict= pickle.load(open(dir_path + 'regressed_out_one_glove.pkl', 'rb'))
     corr_GPT       = corr_dict= pickle.load(open(dir_path + 'regressed_out_one_gpt.pkl', 'rb'))
     corr_arbitrary = corr_dict= pickle.load(open(dir_path + 'regressed_out_arbitrary.pkl', 'rb'))
@@ -971,8 +981,9 @@ def plot_regressed_out_selfpredictability():
     ax.legend()
 
 
-    fig_folder = 'Lingpred/figures/main/'
+    fig_folder = '../figures/main/'
     fig_path = fig_folder+'Selfpredictability_regressed_out_True.pdf'
 
-    plt.savefig(fig_path, format='pdf', bbox_inches='tight')
+    if savefig:
+        plt.savefig(fig_path, format='pdf', bbox_inches='tight')
     plt.show()
