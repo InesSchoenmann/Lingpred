@@ -576,8 +576,6 @@ def get_words_onsets_offsets(dataset:str, subject:int, session:int, run:int, tas
     return df_words
 
 
-
-
 def get_times(ref_word_index, on_offsets):
     '''
     - ref_word_index: index of the reference word (onset = 0)
