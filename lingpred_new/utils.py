@@ -84,11 +84,11 @@ def subsample_to_adjust_PoS(df, PoS_percentage_whole_text, target_size, random_s
     return pd.concat([bigram_rows] + sampled_dfs)
 
 # function returns the indices of the vectors to be used for the X matrix in the self-predictability per tasks
-def get_indices_per_task(dataset = str, task='0', session=0, cutoff=None, acoustic_model=False):
+def get_indices_per_task(dataset = str, task='0', session=0, cutoff=None, phoneme_model=False):
     
     runs = get_runs(dataset, session, 1, task)
     
-    if acoustic_model:
+    if phoneme_model:
         
         # initialise empty DataFrame
         df_phonemes = pd.DataFrame()
@@ -160,7 +160,7 @@ def get_indices_per_task(dataset = str, task='0', session=0, cutoff=None, acoust
         times = get_times(index, on_offsets)
 
         # get indices of words at timepoints:
-        if acoustic_model: # for the acoustic models indices need to be taken from all phoneme on-/offsets
+        if phoneme_model: # for the phoneme models indices need to be taken from all phoneme on-/offsets
             indices_for_timepoints = get_indices_for_timepoints(times, on_offsets_phonemes)
         else:
             indices_for_timepoints = get_indices_for_timepoints(times, on_offsets)
@@ -472,7 +472,7 @@ def get_runs(dataset, session, subject, task):
     return runs 
 
 
-def get_words_onsets_offsets(dataset:str, subject:int, session:int, run:int, task='0', use_real_word_offsets=True):
+def get_words_onsets_offsets(dataset:str, subject=1, session=1, run=0, task='0', use_real_word_offsets=True):
     '''
     Params:
     - raw_data object
