@@ -7,3 +7,7 @@ __pycache__/
 *.pyc
 .DS_Store
 audio/Armeni/*.pkl
+audio/Armeni/stimuli/
+data
+results
+audio/Gwilliams/stimuli
