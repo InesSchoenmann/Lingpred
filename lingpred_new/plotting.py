@@ -516,7 +516,7 @@ def plot_predicting_acoustics(dataset='Armeni',
                                     upperCI(reshape(results[key][:, :, :78])), color=colours[models[i]], alpha=0.3)
         else:
             ax1.plot(times_100, results[key].mean(axis=0).mean(axis=0), c=colours[models[i]], label=labels[i])   
-            ax1.fill_between(times_100[:78], lowerCI(reshape(results[key][:, :, :])), 
+            ax1.fill_between(times_100[:], lowerCI(reshape(results[key][:, :, :])), 
                                     upperCI(reshape(results[key][:, :, :])), color=colours[models[i]], alpha=0.3)
 
 
@@ -892,7 +892,7 @@ def get_quantifications_prediction_split(subject:int, prediction='Top 1',
     print('The maximum p value for all significant timepoint is: ', np.max(significant_pvals))
 
 def plot_selfpredictability(dataset = 'Armeni', plot_split = False, top=1, 
-                            bigrams_removed = False, savefig=False):
+                            bigrams_removed = False, plot_post_onset=False, savefig=False):
     
     dir_path = '../results/{}/self_predictability/'.format(dataset)
     if plot_split: 
@@ -926,11 +926,15 @@ def plot_selfpredictability(dataset = 'Armeni', plot_split = False, top=1,
         if top ==1:
             models = ['Top 1', 'Not Predicted']
     
-    for model, key in zip(models, corr_dict.keys()):
-        ax.plot(pre_onset_times, reshape(corr_dict[key]).mean(axis=0)[0:78], c=colours[model], label=model)
-        ax.fill_between(pre_onset_times, lowerCI(reshape(corr_dict[key])[:, 0:78]), 
-                                   upperCI(reshape(corr_dict[key])[:, 0:78]), color=colours[model], alpha=0.3)
+    if plot_post_onset:
+        end_point =len(times_100)
+    else:
+        end_point=78
         
+    for model, key in zip(models, corr_dict.keys()):
+        ax.plot(times_100[:end_point], reshape(corr_dict[key]).mean(axis=0)[0:end_point], c=colours[model], label=model)
+        ax.fill_between(times_100[:end_point], lowerCI(reshape(corr_dict[key])[:, 0:end_point]), 
+                                   upperCI(reshape(corr_dict[key])[:, 0:end_point]), color=colours[model], alpha=0.3)
         
     ax.set_xlabel('Time in Seconds', fontsize=12)
     ax.set_ylabel('Crossvalidated Correlation', fontsize=12)

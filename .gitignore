@@ -11,3 +11,5 @@ audio/Armeni/stimuli/
 data
 results
 audio/Gwilliams/stimuli
+audio/Gwilliams/indices_all_tasks.pkl
+notebooks/Old_Audio_Encoding.ipynb
